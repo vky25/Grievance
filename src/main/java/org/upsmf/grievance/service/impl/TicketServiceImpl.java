@@ -196,15 +196,22 @@ public class TicketServiceImpl implements TicketService {
      */
     private void setUpdateTicket(UpdateTicketRequest updateTicketRequest, Ticket ticket) {
         // TODO check request role and permission
-        ticket.setStatus(updateTicketRequest.getStatus());
-        ticket.setAssignedToId(updateTicketRequest.getCc());
-        ticket.setPriority(updateTicketRequest.getPriority());
+        if(updateTicketRequest.getStatus()!=null)
+            ticket.setStatus(updateTicketRequest.getStatus());
+        if(updateTicketRequest.getCc()!=null)
+            ticket.setAssignedToId(updateTicketRequest.getCc());
+        if(updateTicketRequest.getPriority()!=null)
+            ticket.setPriority(updateTicketRequest.getPriority());
+        if(updateTicketRequest.getIsJunk()!=null)
+            ticket.setJunk(updateTicketRequest.getIsJunk());
         // update assignee comments
-        Comments comments = Comments.builder().comment(updateTicketRequest.getComment())
-                        .userId(updateTicketRequest.getRequestedBy())
-                        .ticketId(ticket.getId())
-                        .build();
-        commentRepository.save(comments);
+        if(updateTicketRequest.getComment()!=null) {
+            Comments comments = Comments.builder().comment(updateTicketRequest.getComment())
+                    .userId(updateTicketRequest.getRequestedBy())
+                    .ticketId(ticket.getId())
+                    .build();
+            commentRepository.save(comments);
+        }
         // update assignee attachment url
         if(updateTicketRequest.getAssigneeAttachmentURLs() != null) {
             for (String url : updateTicketRequest.getAssigneeAttachmentURLs()) {
