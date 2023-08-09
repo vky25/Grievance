@@ -33,9 +33,13 @@ public class UserController {
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<String> resetPassword(@RequestParam String token, @RequestParam String newPassword) {
-        // Logic for resetting password using token
-        return ResponseEntity.ok("Password reset successful.");
+    public ResponseEntity<String> resetPassword(@RequestParam String email, @RequestParam String newPassword) {
+        try {
+            userService.resetUserPassword(email, newPassword);
+            return ResponseEntity.ok("Password reset successful.");
+        } catch (Exception e) {
+            return ResponseEntity.badRequest().body("User not found.");
+        }
     }
 
     @PostMapping("/login")

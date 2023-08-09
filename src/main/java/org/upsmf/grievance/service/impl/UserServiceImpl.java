@@ -45,6 +45,18 @@ public class UserServiceImpl implements UserService {
     }
 
     @Override
+    public void resetUserPassword(String email, String newPassword) throws Exception {
+        User user = userRepository.findByEmail(email);
+
+        if (user == null) {
+            throw new Exception("User not found");
+        }
+
+        user.setPassword(newPassword);
+        userRepository.save(user);
+    }
+
+    @Override
     public User findByEmail(String email) {
 
         return userRepository.findByEmail(email);

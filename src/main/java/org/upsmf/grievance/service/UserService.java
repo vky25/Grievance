@@ -13,4 +13,6 @@ public interface UserService {
 
     boolean matchPassword(String rawPassword, String hashedPassword);
 
+    void resetUserPassword(String email, String newPassword) throws Exception;
+
 }
