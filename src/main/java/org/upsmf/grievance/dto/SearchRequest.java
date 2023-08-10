@@ -26,6 +26,8 @@ public class SearchRequest {
 
     private Boolean isJunk;
 
+    private Boolean isEscalated;
+
     private TicketPriority priority;
 
     private int page;
