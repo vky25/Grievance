@@ -1,10 +1,10 @@
-package org.upsmf.notification;
+package org.upsmf.grievance;
 
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 
 @SpringBootTest
-class NotificationServiceApplicationTests {
+class GrievanceServiceApplicationTests {
 
 	@Test
 	void contextLoads() {

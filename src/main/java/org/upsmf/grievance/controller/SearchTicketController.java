@@ -15,7 +15,7 @@ import org.upsmf.grievance.service.SearchService;
 import java.util.Map;
 
 @Controller
-@RequestMapping("/search")
+@RequestMapping("/api/search")
 public class SearchTicketController {
 
     @Autowired

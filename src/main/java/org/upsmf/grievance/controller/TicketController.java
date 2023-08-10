@@ -14,7 +14,7 @@ import org.upsmf.grievance.service.AttachmentService;
 import org.upsmf.grievance.service.TicketService;
 
 @Controller
-@RequestMapping("/ticket")
+@RequestMapping("/api/ticket")
 public class TicketController {
 
     @Autowired

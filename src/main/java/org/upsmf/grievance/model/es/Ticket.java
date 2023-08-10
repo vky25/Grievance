@@ -90,13 +90,4 @@ public class Ticket {
     @Field(name = "escalated_by")
     private Long escalatedBy = -1L;
 
-   /* @Field(name = "comments")
-    private List<Comments> comments;
-
-    @Field(name = "raiser_attachment_urls")
-    private String raiserAttachmentURLs;
-
-    @Field(name = "assignee_attachment_urls")
-    private String assigneeAttachmentURLs;*/
-
 }
