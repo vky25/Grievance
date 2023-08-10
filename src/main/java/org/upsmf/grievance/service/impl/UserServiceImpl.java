@@ -1,8 +1,12 @@
 package org.upsmf.grievance.service.impl;
 
+import com.google.api.gax.rpc.NotFoundException;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.server.ResponseStatusException;
 import org.upsmf.grievance.model.Role;
 import org.upsmf.grievance.model.User;
 import org.upsmf.grievance.repository.RoleRepository;
@@ -29,7 +33,7 @@ public class UserServiceImpl implements UserService {
         user.setPassword(passwordEncoder.encode(user.getPassword()));
         // Assign a default role for new users
         Role userRole = roleRepository.findByName("ROLE_USER");
-        user.setRoles(Collections.singleton(userRole));
+      //  user.setRoles(Collections.singleton(userRole));
         return userRepository.save(user);
     }
 
@@ -54,6 +58,20 @@ public class UserServiceImpl implements UserService {
 
         user.setPassword(newPassword);
         userRepository.save(user);
+    }
+
+    @Override
+    public void assignRole(Long userId, Long roleId) throws NotFoundException {
+        try {
+            User user = userRepository.getById(userId);
+            //Role role = roleRepository.getById(roleId);
+           // user.getRoles().clear();
+          //  user.getRoles().add(role);
+
+            userRepository.save(user);
+        } catch (EmptyResultDataAccessException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User or Role not found", e);
+        }
     }
 
     @Override
