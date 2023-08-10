@@ -12,5 +12,4 @@ public interface TicketRepository extends ElasticsearchRepository<Ticket, String
     @Query("{'ticket_id': ?0}")
     Optional<Ticket> findOneByTicketId(long id);
 
-
 }

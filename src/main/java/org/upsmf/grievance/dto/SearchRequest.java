@@ -28,7 +28,7 @@ public class SearchRequest {
 
     private TicketPriority priority;
 
-    private int offset;
+    private int page;
 
     private int size;
 
