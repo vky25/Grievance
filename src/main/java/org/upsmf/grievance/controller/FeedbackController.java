@@ -13,7 +13,7 @@ import org.upsmf.grievance.model.reponse.Response;
 import org.upsmf.grievance.service.FeedbackService;
 
 @Controller
-@RequestMapping("/feedback")
+@RequestMapping("/api/feedback")
 public class FeedbackController {
 
     @Autowired
