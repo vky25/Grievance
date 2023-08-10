@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.upsmf.grievance.dto.SearchRequest;
 import org.upsmf.grievance.model.es.Ticket;
@@ -22,7 +23,7 @@ public class SearchTicketController {
     private SearchService searchService;
 
     @PostMapping("/getAllTickets")
-    public ResponseEntity<Response> search(SearchRequest searchRequest){
+    public ResponseEntity<Response> search(@RequestBody SearchRequest searchRequest){
         TicketResponse responseTicket = searchService.search(searchRequest);
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
         return new ResponseEntity<>(response, HttpStatus.OK);

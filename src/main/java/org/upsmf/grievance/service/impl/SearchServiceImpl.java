@@ -1,23 +1,17 @@
 package org.upsmf.grievance.service.impl;
 
-import org.elasticsearch.index.query.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.elasticsearch.core.ElasticsearchOperations;
-import org.springframework.data.elasticsearch.core.SearchHits;
-import org.springframework.data.elasticsearch.core.query.NativeSearchQueryBuilder;
-import org.springframework.data.elasticsearch.core.query.Query;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.upsmf.grievance.model.es.Feedback;
-import org.upsmf.grievance.model.es.Ticket;
 import org.upsmf.grievance.dto.SearchRequest;
+import org.upsmf.grievance.model.es.Ticket;
 import org.upsmf.grievance.model.reponse.TicketResponse;
 import org.upsmf.grievance.repository.es.TicketRepository;
 import org.upsmf.grievance.service.SearchService;
-
-import java.util.Optional;
 
 @Service
 public class SearchServiceImpl implements SearchService {
@@ -29,7 +23,10 @@ public class SearchServiceImpl implements SearchService {
 
     @Override
     public TicketResponse search(SearchRequest searchRequest) {
-        Page<Ticket> page = esTicketRepository.findAll(Pageable.ofSize(defaultPageSize));
+        //Calculate
+        String keyValue = searchRequest.getSort().keySet().iterator().next();
+        Pageable pageable = PageRequest.of(searchRequest.getPage(), searchRequest.getSize(), Sort.Direction.valueOf(searchRequest.getSort().get(keyValue).toUpperCase()),keyValue);
+        Page<Ticket> page = esTicketRepository.findAll(pageable);
         return TicketResponse.builder().count(page.getTotalElements()).data(page.getContent()).build();
     }
 
