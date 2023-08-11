@@ -20,6 +20,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.upsmf.grievance.config.EsConfig;
 import org.upsmf.grievance.dto.SearchRequest;
+import org.upsmf.grievance.enums.RequesterType;
+import org.upsmf.grievance.enums.TicketPriority;
+import org.upsmf.grievance.enums.TicketStatus;
 import org.upsmf.grievance.model.es.Ticket;
 import org.upsmf.grievance.model.reponse.TicketResponse;
 import org.upsmf.grievance.repository.es.TicketRepository;
@@ -136,7 +139,105 @@ public class SearchServiceImpl implements SearchService {
     private static List<Object> getDocumentsFromHits(SearchHits hits) {
         List<Object> documents = new ArrayList<Object>();
         for (SearchHit hit : hits) {
-            documents.add(hit.getSourceAsMap());
+            Ticket esTicket = new Ticket();
+            for (Map.Entry entry : hit.getSourceAsMap().entrySet()) {
+                String key = (String) entry.getKey();
+                switch (key) {
+                    case "ticket_id":
+                        Long longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setTicketId(longValue);
+                        break;
+                    case "requester_first_name":
+                        esTicket.setFirstName((String) entry.getValue());
+                        break;
+                    case "requester_last_name":
+                        esTicket.setLastName((String) entry.getValue());
+                        break;
+                    case "requester_phone":
+                        esTicket.setPhone((String) entry.getValue());
+                        break;
+                    case "requester_email":
+                        esTicket.setEmail((String) entry.getValue());
+                        break;
+                    case "requester_type":
+                        for (RequesterType enumValue : RequesterType.values()) {
+                            if (enumValue.name().equals(entry.getValue().toString())) {
+                                esTicket.setRequesterType(enumValue);
+                                break;
+                            }
+                        }
+                        break;
+                    case "assigned_to_id":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setAssignedToId(longValue);
+                        break;
+                    case "assigned_to_name":
+                        esTicket.setAssignedToName((String) entry.getValue());
+                        break;
+                    case "description":
+                        esTicket.setDescription((String) entry.getValue());
+                        break;
+                    case "is_junk":
+                        esTicket.setJunk((Boolean) entry.getValue());
+                        break;
+                    case "created_date":
+                        esTicket.setCreatedDate((String) entry.getValue());
+                        break;
+                    case "updated_date":
+                        esTicket.setUpdatedDate((String) entry.getValue());
+                        break;
+                    case "created_date_ts":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setCreatedDateTS(longValue);
+                        break;
+                    case "updated_date_ts":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setUpdatedDateTS(longValue);
+                        break;
+                    case "last_updated_by":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setLastUpdatedBy(longValue);
+                        break;
+                    case "is_escalated":
+                        esTicket.setEscalated((Boolean) entry.getValue());
+                        break;
+                    case "escalated_date":
+                        esTicket.setEscalatedDate((String) entry.getValue());
+                        break;
+                    case "escalated_date_ts":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setEscalatedDateTS(longValue);
+                        break;
+                    case "escalated_to":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setEscalatedTo(longValue);
+                        break;
+                    case "status":
+                        for (TicketStatus enumValue : TicketStatus.values()) {
+                            if (enumValue.name().equals(entry.getValue().toString())) {
+                                esTicket.setStatus(enumValue);
+                                break;
+                            }
+                        }
+                        break;
+                    case "request_type":
+                        esTicket.setRequestType((String) entry.getValue());
+                        break;
+                    case "priority":
+                        for (TicketPriority enumValue : TicketPriority.values()) {
+                            if (enumValue.name().equals(entry.getValue().toString())) {
+                                esTicket.setPriority(enumValue);
+                                break;
+                            }
+                        }
+                        break;
+                    case "escalated_by":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setEscalatedBy(longValue);
+                        break;
+                }
+            }
+            documents.add(esTicket);
         }
         return documents;
     }
