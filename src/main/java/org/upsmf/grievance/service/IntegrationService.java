@@ -15,4 +15,8 @@ public interface IntegrationService {
 
     ResponseEntity<String> getUsers(JsonNode payload) throws JsonProcessingException;
     void assignRole(Long userId, Long roleId) throws NotFoundException;
+
+    ResponseEntity<User> activateUser(JsonNode payload) throws Exception;
+
+    ResponseEntity<User> deactivateUser(JsonNode payload) throws Exception;
 }

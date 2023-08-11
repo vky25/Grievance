@@ -33,7 +33,11 @@ public class IntegrationServiceImpl implements IntegrationService {
     private String updateUserUrl;
     @Value("${api.user.searchUrl}")
     private String apiUrl;
+    @Value("${api.user.activeUserUrl}")
+    private String activeUserUrl;
 
+    @Value("${api.user.deactivateUserUrl}")
+    private String deactivateUserUrl;
     @Override
     public ResponseEntity<User> createUser(UserDto user) throws Exception {
 
@@ -133,6 +137,7 @@ public class IntegrationServiceImpl implements IntegrationService {
                 .username(userContent.path("userName").asText())
                 .email(userContent.path("email").asText())
                 .emailVerified(userContent.path("emailVerified").asBoolean())
+                .status(userContent.path("status").asInt())
                 .roles(rolesArray)
                 .build();
 
@@ -150,6 +155,54 @@ public class IntegrationServiceImpl implements IntegrationService {
 
         return response;
 
+    }
+
+    @Override
+    public ResponseEntity<User> activateUser(JsonNode payload) throws Exception{
+        ObjectMapper mapper = new ObjectMapper();
+        ResponseEntity<String> response = restTemplate.exchange(
+                activeUserUrl, HttpMethod.POST,
+                new HttpEntity<>(payload), String.class
+        );
+        if (response.getStatusCode() == HttpStatus.OK) {
+            String getUsersResponseBody = response.getBody();
+            JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
+
+            JsonNode userContentData = getUsersJsonNode.path("result").path("response").path("content").get(0);
+
+            User newUser = createUserWithApiResponse(userContentData);
+            User savedUser = userRepository.save(newUser);
+
+            return new ResponseEntity<>(savedUser, HttpStatus.OK);
+        }
+        else {
+            // Handle error cases here
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    @Override
+    public ResponseEntity<User> deactivateUser(JsonNode payload) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        ResponseEntity<String> response = restTemplate.exchange(
+                deactivateUserUrl, HttpMethod.POST,
+                new HttpEntity<>(payload), String.class
+        );
+        if (response.getStatusCode() == HttpStatus.OK) {
+            String getUsersResponseBody = response.getBody();
+            JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
+
+            JsonNode userContentData = getUsersJsonNode.path("result").path("response").path("content").get(0);
+
+            User newUser = createUserWithApiResponse(userContentData);
+            User savedUser = userRepository.save(newUser);
+
+            return new ResponseEntity<>(savedUser, HttpStatus.OK);
+        }
+        else {
+            // Handle error cases here
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
 

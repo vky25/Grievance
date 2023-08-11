@@ -32,6 +32,8 @@ public class User {
 
     private boolean emailVerified;
 
+    private int status;
+
     private String[] roles;
 
     @ManyToMany(fetch = FetchType.EAGER)
