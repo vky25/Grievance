@@ -22,14 +22,22 @@ public class SearchTicketController {
     private SearchService searchService;
 
     @PostMapping("/getAllTickets")
-    public ResponseEntity<Response> search(@RequestBody SearchRequest searchRequest){
+    public ResponseEntity<Response> search(@RequestBody SearchRequest searchRequest) {
         TicketResponse responseTicket = searchService.search(searchRequest);
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
+
     @PostMapping("/searchTickets")
-    public ResponseEntity<Response> searchTickets(@RequestBody SearchRequest searchRequest){
+    public ResponseEntity<Response> searchTickets(@RequestBody SearchRequest searchRequest) {
         Map<String, Object> responseTicket = searchService.searchTickets(searchRequest);
+        Response response = new Response(HttpStatus.OK.value(), responseTicket);
+        return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+
+    @PostMapping("/dashboardReport")
+    public ResponseEntity<Response> getDashboardReport(@RequestBody SearchRequest searchRequest) {
+        Map<String, Object> responseTicket = searchService.dashboardReport(searchRequest);
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
