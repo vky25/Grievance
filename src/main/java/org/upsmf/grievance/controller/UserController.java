@@ -45,6 +45,14 @@ public class UserController {
         return integrationService.getUsers(payload);
     }
 
+    @PostMapping("/activate")
+    public ResponseEntity<User> activateUser(@RequestBody JsonNode payload)throws Exception {
+        return  integrationService.activateUser(payload);
+    }
 
+    @PostMapping("/deactivate")
+    public ResponseEntity<User> deactivateUser(@RequestBody JsonNode payload)throws Exception {
+        return  integrationService.deactivateUser(payload);
+    }
 
 }
