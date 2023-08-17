@@ -1,12 +1,10 @@
 package org.upsmf.grievance.service.impl;
 
+import org.checkerframework.checker.units.qual.C;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.MatchQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -19,6 +17,7 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.upsmf.grievance.config.EsConfig;
+import org.upsmf.grievance.constants.Constants;
 import org.upsmf.grievance.dto.SearchRequest;
 import org.upsmf.grievance.enums.RequesterType;
 import org.upsmf.grievance.enums.TicketPriority;
@@ -29,16 +28,19 @@ import org.upsmf.grievance.repository.es.TicketRepository;
 import org.upsmf.grievance.service.SearchService;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class SearchServiceImpl implements SearchService {
 
     @Value("${es.default.page.size}")
     private int defaultPageSize;
+
+    private static final Map<String, Object> assignmentResponse = new HashMap<>();
+    private static final Map<String, Map<String, Object>> resolutionResponse = new HashMap<>();
+    private static final Map<String, Object> departmentNameResponse = new HashMap<>();
+    private static final Map<String, Object> performanceIndicatorsResponse = new HashMap<>();
+    private static final Map<String, Object> finalResponse = new HashMap<>();
     @Autowired
     private TicketRepository esTicketRepository;
     @Autowired
@@ -56,22 +58,59 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public Map<String, Object> dashboardReport(SearchRequest searchRequest) {
         //Create query for search by keyword
-        SearchResponse searchJunkResponse = getDashboardSearchResponse(searchRequest, "isJunk");
-        SearchResponse searchOpenStatusResponse = getDashboardSearchResponse(searchRequest, "openStatus");
-        SearchResponse searchClosedStatusResponse = getDashboardSearchResponse(searchRequest, "closedStatus");
-        SearchResponse searchIsEsclatedResponse = getDashboardSearchResponse(searchRequest, "isEscalated");
-        Map<String, Object> response = new HashMap<>();
-        response.put("isJunk", searchJunkResponse.getHits().getTotalHits().value);
-        response.put("isOpen", searchOpenStatusResponse.getHits().getTotalHits().value);
-        response.put("isClosed", searchClosedStatusResponse.getHits().getTotalHits().value);
-        response.put("isEscalated", searchIsEsclatedResponse.getHits().getTotalHits().value);
+        Map<String, Object> response = null;
+        if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.AFFILIATION)) {
+            response = getfinalResponse(searchRequest, Constants.AFFILIATION);
+        } else if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.EXAM)) {
+            response = getfinalResponse(searchRequest, Constants.EXAM);
+        } else if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.ADMISSION)) {
+            response = getfinalResponse(searchRequest, Constants.ADMISSION);
+        } else if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.REGISTRATION)) {
+            response = getfinalResponse(searchRequest, Constants.REGISTRATION);
+        } else if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.ASSESSMENT)) {
+            response = getfinalResponse(searchRequest, Constants.ASSESSMENT);
+        } else {
+            response = getfinalResponse(searchRequest, Constants.AFFILIATION);
+        }
         return response;
     }
 
-    private SearchResponse getDashboardSearchResponse(SearchRequest searchRequest, String reportType) {
+    private Map<String, Object> getfinalResponse(SearchRequest searchRequest, Long cc) {
+        SearchResponse searchJunkResponse = getDashboardSearchResponse(searchRequest, "isJunk", cc);
+        SearchResponse searchOpenStatusResponse = getDashboardSearchResponse(searchRequest, "openStatus", cc);
+        SearchResponse searchClosedStatusResponse = getDashboardSearchResponse(searchRequest, "closedStatus", cc);
+        SearchResponse searchIsEsclatedResponse = getDashboardSearchResponse(searchRequest, "isEscalated", cc);
+        SearchResponse searchUnassignedResponse = getDashboardSearchResponse(searchRequest, "openStatus", cc);
+        SearchResponse searchOpenTicketsResponse = getDashboardSearchResponse(searchRequest, "openStatus", cc);
+
+        Map<String, Object> response = new HashMap<>();
+        //response.put(Constants.TOTAL_TICKETS, esTicketRepository.findAllById());
+        response.put(Constants.IS_JUNK, searchJunkResponse.getHits().getTotalHits().value);
+        response.put(Constants.IS_OPEN, searchOpenStatusResponse.getHits().getTotalHits().value);
+        response.put(Constants.IS_CLOSED, searchClosedStatusResponse.getHits().getTotalHits().value);
+        response.put(Constants.IS_ESCALATED, searchIsEsclatedResponse.getHits().getTotalHits().value);
+        assignmentResponse.put(Constants.ASSESSMENT_MATRIX,response);
+        if(cc.equals(Constants.ASSESSMENT)){
+            departmentNameResponse.put(Constants.ASSESSMENT_DEPARTMENT,response);
+        } else if (cc.equals(Constants.AFFILIATION)) {
+            departmentNameResponse.put(Constants.AFFILIATION_NAME,response);
+        } else if (cc.equals(Constants.EXAM)) {
+            departmentNameResponse.put(Constants.EXAM_NAME,response);
+        } else if (cc.equals(Constants.REGISTRATION)) {
+            departmentNameResponse.put(Constants.REGISTRATION_NAME,response);
+        } else if (cc.equals(Constants.ADMISSION)) {
+            departmentNameResponse.put(Constants.ADMISSION_NAME,response);
+        }
+        resolutionResponse.put(Constants.RESOLUTION_MATRIX,departmentNameResponse);
+        //finalResponse.put()
+        return response;
+    }
+
+    private SearchResponse getDashboardSearchResponse(SearchRequest searchRequest, String reportType, Long cc) {
         SearchResponse searchResponse;
         BoolQueryBuilder finalQuery = QueryBuilders.boolQuery();
         finalQuery = getDateRangeQuery(searchRequest, finalQuery);
+        finalQuery = getCCRangeQuery(cc, finalQuery);
         if (reportType.equals("isJunk")) {
             finalQuery = getJunkQuery(true, finalQuery);
         } else if (reportType.equals("openStatus")) {
@@ -114,11 +153,82 @@ public class SearchServiceImpl implements SearchService {
     private SearchResponse getSearchResponse(SearchRequest searchRequest) {
         SearchResponse searchResponse;
         String keyValue = searchRequest.getSort().keySet().iterator().next();
+        switch (keyValue){
+            case "ticketId":
+                keyValue = "ticket_id";
+                break;
+            case "firstName":
+                keyValue = "requester_first_name";
+                break;
+            case "lastName":
+                keyValue = "requester_last_name";
+                break;
+            case "phone":
+                keyValue = "requester_phone";
+                break;
+            case "email":
+                keyValue = "requester_email";
+                break;
+            case "requesterType":
+                keyValue = "requester_type";
+                break;
+            case "assignedToId":
+                keyValue = "assigned_to_id";
+                break;
+            case "assignedToName":
+                keyValue = "assigned_to_name";
+                break;
+            case "description":
+                keyValue = "description";
+                break;
+            case "junk":
+                keyValue = "is_junk";
+                break;
+            case "createdDate":
+                keyValue = "created_date";
+                break;
+            case "updatedDate":
+                keyValue = "updated_date";
+                break;
+            case "createdDateTS":
+                keyValue = "created_date_ts";
+                break;
+            case "updatedDateTS":
+                keyValue = "updated_date_ts";
+                break;
+            case "lastUpdatedBy":
+                keyValue = "last_updated_by";
+                break;
+            case "escalated":
+                keyValue = "is_escalated";
+                break;
+            case "escalatedDate":
+                keyValue = "escalated_date";
+                break;
+            case "escalatedDateTS":
+                keyValue = "escalated_date_ts";
+                break;
+            case "escalatedTo":
+                keyValue = "escalated_to";
+                break;
+            case "status":
+                keyValue = "status";
+                break;
+            case "requestType":
+                keyValue = "request_type";
+                break;
+            case "priority":
+                keyValue = "priority";
+                break;
+            case "escalatedBy":
+                keyValue = "escalated_by";
+                break;
+        }
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                 .query(createTicketSearchQuery(searchRequest))
                 .from(searchRequest.getPage())
                 .size(searchRequest.getSize())
-                .sort(keyValue, SortOrder.valueOf(searchRequest.getSort().get(keyValue).toUpperCase()));
+                .sort(keyValue, SortOrder.valueOf(searchRequest.getSort().get(searchRequest.getSort().keySet().iterator().next()).toUpperCase()));
 
         org.elasticsearch.action.search.SearchRequest search = new org.elasticsearch.action.search.SearchRequest("ticket");
         search.searchType(SearchType.QUERY_THEN_FETCH);
@@ -246,9 +356,9 @@ public class SearchServiceImpl implements SearchService {
         BoolQueryBuilder finalQuery = QueryBuilders.boolQuery();
         // search by keyword
         if (searchRequest.getSearchKeyword() != null && !searchRequest.getSearchKeyword().isBlank()) {
-            MatchQueryBuilder firstNameKeywordMatchQuery = QueryBuilders.matchQuery("requester_first_name", searchRequest.getSearchKeyword());
-            MatchQueryBuilder phoneKeywordMatchQuery = QueryBuilders.matchQuery("requester_phone", searchRequest.getSearchKeyword());
-            MatchQueryBuilder emailKeywordMatchQuery = QueryBuilders.matchQuery("requester_email", searchRequest.getSearchKeyword());
+            RegexpQueryBuilder firstNameKeywordMatchQuery = QueryBuilders.regexpQuery("requester_first_name", ".*"+searchRequest.getSearchKeyword().toLowerCase()+".*");
+            RegexpQueryBuilder phoneKeywordMatchQuery = QueryBuilders.regexpQuery("requester_phone", ".*"+searchRequest.getSearchKeyword().toLowerCase()+".*");
+            RegexpQueryBuilder emailKeywordMatchQuery = QueryBuilders.regexpQuery("requester_email", ".*"+searchRequest.getSearchKeyword().toLowerCase()+".*");
             BoolQueryBuilder keywordSearchQuery = QueryBuilders.boolQuery();
             keywordSearchQuery.should(firstNameKeywordMatchQuery).should(phoneKeywordMatchQuery).should(emailKeywordMatchQuery);
             finalQuery.must(keywordSearchQuery);
@@ -259,16 +369,21 @@ public class SearchServiceImpl implements SearchService {
             prioritySearchQuery.must(priorityMatchQuery);
             finalQuery.must(prioritySearchQuery);
         }
-        if (searchRequest.getFilter().get("cc") != null) {
-            MatchQueryBuilder ccMatchQuery = QueryBuilders.matchQuery("assigned_to_id", searchRequest.getFilter().get("cc"));
-            BoolQueryBuilder ccSearchQuery = QueryBuilders.boolQuery();
-            ccSearchQuery.must(ccMatchQuery);
-            finalQuery.must(ccSearchQuery);
-        }
+        getCCRangeQuery(((Number) searchRequest.getFilter().get("cc")).longValue(), finalQuery);
         getDateRangeQuery(searchRequest, finalQuery);
         getStatusQuery((List<String>) searchRequest.getFilter().get("status"), finalQuery);
         getJunkQuery(searchRequest.getIsJunk(), finalQuery);
         getEsclatedTicketsQuery(searchRequest.getIsEscalated(), finalQuery);
+        return finalQuery;
+    }
+
+    private static BoolQueryBuilder getCCRangeQuery(Long cc, BoolQueryBuilder finalQuery) {
+        if (cc != null) {
+            MatchQueryBuilder ccMatchQuery = QueryBuilders.matchQuery("assigned_to_id", cc);
+            BoolQueryBuilder ccSearchQuery = QueryBuilders.boolQuery();
+            ccSearchQuery.must(ccMatchQuery);
+            finalQuery.must(ccSearchQuery);
+        }
         return finalQuery;
     }
 
