@@ -14,7 +14,7 @@ public class Constants {
     public static final String IS_JUNK = "isJunk";
     public static final String IS_ESCALATED = "isEscalated";
     public static final String UNASSIGNED = "unassigned";
-    public static final String ASSESSMENT_MATRIX = "resolutionMatrix";
+    public static final String ASSESSMENT_MATRIX = "assignmentMatrix";
     public static final String RESOLUTION_MATRIX = "resolutionMatrix";
     public static final String AFFILIATION_NAME = "AFFILIATION";
     public static final String ASSESSMENT_DEPARTMENT = "ASSESSMENT";

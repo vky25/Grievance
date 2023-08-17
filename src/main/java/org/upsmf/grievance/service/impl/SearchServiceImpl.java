@@ -4,10 +4,7 @@ import org.checkerframework.checker.units.qual.C;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.index.query.BoolQueryBuilder;
-import org.elasticsearch.index.query.MatchQueryBuilder;
-import org.elasticsearch.index.query.QueryBuilders;
-import org.elasticsearch.index.query.RangeQueryBuilder;
+import org.elasticsearch.index.query.*;
 import org.elasticsearch.search.SearchHit;
 import org.elasticsearch.search.SearchHits;
 import org.elasticsearch.search.builder.SearchSourceBuilder;
@@ -156,11 +153,82 @@ public class SearchServiceImpl implements SearchService {
     private SearchResponse getSearchResponse(SearchRequest searchRequest) {
         SearchResponse searchResponse;
         String keyValue = searchRequest.getSort().keySet().iterator().next();
+        switch (keyValue){
+            case "ticketId":
+                keyValue = "ticket_id";
+                break;
+            case "firstName":
+                keyValue = "requester_first_name";
+                break;
+            case "lastName":
+                keyValue = "requester_last_name";
+                break;
+            case "phone":
+                keyValue = "requester_phone";
+                break;
+            case "email":
+                keyValue = "requester_email";
+                break;
+            case "requesterType":
+                keyValue = "requester_type";
+                break;
+            case "assignedToId":
+                keyValue = "assigned_to_id";
+                break;
+            case "assignedToName":
+                keyValue = "assigned_to_name";
+                break;
+            case "description":
+                keyValue = "description";
+                break;
+            case "junk":
+                keyValue = "is_junk";
+                break;
+            case "createdDate":
+                keyValue = "created_date";
+                break;
+            case "updatedDate":
+                keyValue = "updated_date";
+                break;
+            case "createdDateTS":
+                keyValue = "created_date_ts";
+                break;
+            case "updatedDateTS":
+                keyValue = "updated_date_ts";
+                break;
+            case "lastUpdatedBy":
+                keyValue = "last_updated_by";
+                break;
+            case "escalated":
+                keyValue = "is_escalated";
+                break;
+            case "escalatedDate":
+                keyValue = "escalated_date";
+                break;
+            case "escalatedDateTS":
+                keyValue = "escalated_date_ts";
+                break;
+            case "escalatedTo":
+                keyValue = "escalated_to";
+                break;
+            case "status":
+                keyValue = "status";
+                break;
+            case "requestType":
+                keyValue = "request_type";
+                break;
+            case "priority":
+                keyValue = "priority";
+                break;
+            case "escalatedBy":
+                keyValue = "escalated_by";
+                break;
+        }
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                 .query(createTicketSearchQuery(searchRequest))
                 .from(searchRequest.getPage())
                 .size(searchRequest.getSize())
-                .sort(keyValue, SortOrder.valueOf(searchRequest.getSort().get(keyValue).toUpperCase()));
+                .sort(keyValue, SortOrder.valueOf(searchRequest.getSort().get(searchRequest.getSort().keySet().iterator().next()).toUpperCase()));
 
         org.elasticsearch.action.search.SearchRequest search = new org.elasticsearch.action.search.SearchRequest("ticket");
         search.searchType(SearchType.QUERY_THEN_FETCH);
@@ -288,9 +356,9 @@ public class SearchServiceImpl implements SearchService {
         BoolQueryBuilder finalQuery = QueryBuilders.boolQuery();
         // search by keyword
         if (searchRequest.getSearchKeyword() != null && !searchRequest.getSearchKeyword().isBlank()) {
-            MatchQueryBuilder firstNameKeywordMatchQuery = QueryBuilders.matchQuery("requester_first_name", searchRequest.getSearchKeyword());
-            MatchQueryBuilder phoneKeywordMatchQuery = QueryBuilders.matchQuery("requester_phone", searchRequest.getSearchKeyword());
-            MatchQueryBuilder emailKeywordMatchQuery = QueryBuilders.matchQuery("requester_email", searchRequest.getSearchKeyword());
+            RegexpQueryBuilder firstNameKeywordMatchQuery = QueryBuilders.regexpQuery("requester_first_name", ".*"+searchRequest.getSearchKeyword().toLowerCase()+".*");
+            RegexpQueryBuilder phoneKeywordMatchQuery = QueryBuilders.regexpQuery("requester_phone", ".*"+searchRequest.getSearchKeyword().toLowerCase()+".*");
+            RegexpQueryBuilder emailKeywordMatchQuery = QueryBuilders.regexpQuery("requester_email", ".*"+searchRequest.getSearchKeyword().toLowerCase()+".*");
             BoolQueryBuilder keywordSearchQuery = QueryBuilders.boolQuery();
             keywordSearchQuery.should(firstNameKeywordMatchQuery).should(phoneKeywordMatchQuery).should(emailKeywordMatchQuery);
             finalQuery.must(keywordSearchQuery);
@@ -301,7 +369,7 @@ public class SearchServiceImpl implements SearchService {
             prioritySearchQuery.must(priorityMatchQuery);
             finalQuery.must(prioritySearchQuery);
         }
-        getCCRangeQuery((Long) searchRequest.getFilter().get("cc"), finalQuery);
+        getCCRangeQuery(((Number) searchRequest.getFilter().get("cc")).longValue(), finalQuery);
         getDateRangeQuery(searchRequest, finalQuery);
         getStatusQuery((List<String>) searchRequest.getFilter().get("status"), finalQuery);
         getJunkQuery(searchRequest.getIsJunk(), finalQuery);
