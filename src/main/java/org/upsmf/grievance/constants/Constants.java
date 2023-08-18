@@ -3,6 +3,8 @@ package org.upsmf.grievance.constants;
 public class Constants {
 
     public static final String TIME_ZONE = "Asia/Kolkata";
+    public static final Long PENDING_21_DAYS = 21l;
+    public static final Long PENDING_15_DAYS = 15l;
     public static final Long AFFILIATION = 1l;
     public static final Long EXAM = 2l;
     public static final Long ADMISSION = 3l;
@@ -21,12 +23,10 @@ public class Constants {
     public static final String REGISTRATION_NAME = "REGISTRATION";
     public static final String ADMISSION_NAME = "ADMISSION";
     public static final String EXAM_NAME = "EXAM";
-    public static final String OPEN_TICKET = "openTicket";
-    public static final String DEPARTMENT = "department";
+    public static final String OPEN_TICKET_GTE15 = "openTicketGte15";
+    public static final String OPEN_TICKET_GTE21 = "openTicketGte21";
     public static final String PERFORMANCE_INDICATORS = "performanceIndicators";
     public static final String TURN_AROUND_TIME = "turnAroundTime";
     public static final String ESCLATION_PERCENTAGE = "escalationPercentage";
     public static final String NUDGE_TICKET_PERCENTAGE = "nudgeTicketPercentage";
-    public static final String TICKET_PENDING = "ticketpending";
-
 }

@@ -1,6 +1,5 @@
 package org.upsmf.grievance.service.impl;
 
-import org.checkerframework.checker.units.qual.C;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.RequestOptions;
@@ -28,6 +27,8 @@ import org.upsmf.grievance.repository.es.TicketRepository;
 import org.upsmf.grievance.service.SearchService;
 
 import java.io.IOException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
@@ -36,11 +37,26 @@ public class SearchServiceImpl implements SearchService {
     @Value("${es.default.page.size}")
     private int defaultPageSize;
 
-    private static final Map<String, Object> assignmentResponse = new HashMap<>();
-    private static final Map<String, Map<String, Object>> resolutionResponse = new HashMap<>();
-    private static final Map<String, Object> departmentNameResponse = new HashMap<>();
-    private static final Map<String, Object> performanceIndicatorsResponse = new HashMap<>();
-    private static final Map<String, Object> finalResponse = new HashMap<>();
+    @Value("${pending.21.days}")
+    private long PENDING_21_DAYS;
+
+    @Value("${pending.15.days}")
+    private long PENDING_15_DAYS;
+
+    private Map<String, Object> departmentNameResponse = new HashMap<>();
+    private Map<String, Object> performanceIndicatorsResponse = new HashMap<>();
+    private Map<String, Object> finalResponse = new HashMap<>();
+    private Boolean allDepartment = false;
+    private Boolean totalFinalResponse = false;
+    private Boolean multiSelectResponse = false;
+    private long totalIsJunk = 0;
+    private long totalOpenStatus = 0;
+    private long totalcloseStatus = 0;
+    private long totalIsEscalated = 0;
+    private long totalUnassigned = 0;
+    private long totalNudgeTickets = 0;
+    private long totalOpenTicketGte15 = 0;
+    private long totalOpenTicketGte21 = 0;
     @Autowired
     private TicketRepository esTicketRepository;
     @Autowired
@@ -58,58 +74,138 @@ public class SearchServiceImpl implements SearchService {
     @Override
     public Map<String, Object> dashboardReport(SearchRequest searchRequest) {
         //Create query for search by keyword
-        Map<String, Object> response = null;
-        if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.AFFILIATION)) {
-            response = getfinalResponse(searchRequest, Constants.AFFILIATION);
-        } else if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.EXAM)) {
-            response = getfinalResponse(searchRequest, Constants.EXAM);
-        } else if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.ADMISSION)) {
-            response = getfinalResponse(searchRequest, Constants.ADMISSION);
-        } else if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.REGISTRATION)) {
-            response = getfinalResponse(searchRequest, Constants.REGISTRATION);
-        } else if (searchRequest.getFilter().get("cc") != null && searchRequest.getFilter().get("cc").equals(Constants.ASSESSMENT)) {
-            response = getfinalResponse(searchRequest, Constants.ASSESSMENT);
+        departmentNameResponse = new HashMap<>();
+        performanceIndicatorsResponse = new HashMap<>();
+        finalResponse = new HashMap<>();
+        totalIsJunk = 0;
+        totalOpenStatus = 0;
+        totalcloseStatus = 0;
+        totalIsEscalated = 0;
+        totalUnassigned = 0;
+        totalOpenTicketGte21 = 0;
+        totalOpenTicketGte15 = 0;
+        totalNudgeTickets = 0;
+        allDepartment = false;
+        totalFinalResponse = false;
+        multiSelectResponse = false;
+        List<Integer> ccList = (List<Integer>) searchRequest.getFilter().get("ccList");
+        if (ccList != null && ccList.size() > 0) {
+            for (int i = 1; i <= ccList.size(); i++) {
+                if (ccList.size() == i) {
+                    multiSelectResponse = true;
+                }
+                Long cc = Long.valueOf(ccList.get(i - 1));
+                if (cc != null && cc.equals(Constants.AFFILIATION)) {
+                    getfinalResponse(searchRequest, Constants.AFFILIATION);
+                } else if (cc != null && cc.equals(Constants.EXAM)) {
+                    getfinalResponse(searchRequest, Constants.EXAM);
+                } else if (cc != null && cc.equals(Constants.ADMISSION)) {
+                    getfinalResponse(searchRequest, Constants.ADMISSION);
+                } else if (cc != null && cc.equals(Constants.REGISTRATION)) {
+                    getfinalResponse(searchRequest, Constants.REGISTRATION);
+                } else if (cc != null && cc.equals(Constants.ASSESSMENT)) {
+                    getfinalResponse(searchRequest, Constants.ASSESSMENT);
+                } else {
+                    allDepartment = true;
+                    getfinalResponse(searchRequest, Constants.AFFILIATION);
+                    getfinalResponse(searchRequest, Constants.EXAM);
+                    getfinalResponse(searchRequest, Constants.ADMISSION);
+                    getfinalResponse(searchRequest, Constants.REGISTRATION);
+                    totalFinalResponse = true;// This flag should be there before last getfinalResponse
+                    getfinalResponse(searchRequest, Constants.ASSESSMENT);
+                }
+            }
         } else {
-            response = getfinalResponse(searchRequest, Constants.AFFILIATION);
+            allDepartment = true;
+            getfinalResponse(searchRequest, Constants.AFFILIATION);
+            getfinalResponse(searchRequest, Constants.EXAM);
+            getfinalResponse(searchRequest, Constants.ADMISSION);
+            getfinalResponse(searchRequest, Constants.REGISTRATION);
+            totalFinalResponse = true;// This flag should be there before last getfinalResponse
+            getfinalResponse(searchRequest, Constants.ASSESSMENT);
         }
-        return response;
+        return finalResponse;
     }
 
-    private Map<String, Object> getfinalResponse(SearchRequest searchRequest, Long cc) {
-        SearchResponse searchJunkResponse = getDashboardSearchResponse(searchRequest, "isJunk", cc);
-        SearchResponse searchOpenStatusResponse = getDashboardSearchResponse(searchRequest, "openStatus", cc);
-        SearchResponse searchClosedStatusResponse = getDashboardSearchResponse(searchRequest, "closedStatus", cc);
-        SearchResponse searchIsEsclatedResponse = getDashboardSearchResponse(searchRequest, "isEscalated", cc);
-        SearchResponse searchUnassignedResponse = getDashboardSearchResponse(searchRequest, "openStatus", cc);
-        SearchResponse searchOpenTicketsResponse = getDashboardSearchResponse(searchRequest, "openStatus", cc);
+    private void getfinalResponse(SearchRequest searchRequest, Long cc) {
+        SearchResponse searchJunkResponse = getDashboardSearchResponse(searchRequest, "isJunk", cc, null);
+        SearchResponse searchOpenStatusResponse = getDashboardSearchResponse(searchRequest, "openStatus", cc, null);
+        SearchResponse searchClosedStatusResponse = getDashboardSearchResponse(searchRequest, "closedStatus", cc, null);
+        SearchResponse searchTurnAroundStatusResponse = getDashboardSearchResponse(searchRequest, "closedStatus", cc, null);
+        SearchResponse searchIsEsclatedResponse = getDashboardSearchResponse(searchRequest, "isEscalated", cc, null);
+        SearchResponse searchUnassignedResponse = getDashboardSearchResponse(searchRequest, "openStatus", -1l, null);
+        SearchResponse searchOpenTicketsGte21Response = getDashboardSearchResponse(searchRequest, "openStatus", cc, "isGte21");
+        SearchResponse searchOpenTicketsGte15Response = getDashboardSearchResponse(searchRequest, "openStatus", cc, "isGte15");
+        SearchResponse searchPriorityResponse = getDashboardSearchResponse(searchRequest, "highPriority", cc, null);
 
         Map<String, Object> response = new HashMap<>();
-        //response.put(Constants.TOTAL_TICKETS, esTicketRepository.findAllById());
+        totalIsJunk = totalIsJunk + searchJunkResponse.getHits().getTotalHits().value;
+        totalOpenStatus = totalOpenStatus + searchOpenStatusResponse.getHits().getTotalHits().value;
+        totalcloseStatus = totalcloseStatus + searchClosedStatusResponse.getHits().getTotalHits().value;
+        totalIsEscalated = totalIsEscalated + searchIsEsclatedResponse.getHits().getTotalHits().value;
+        totalUnassigned = totalUnassigned + searchUnassignedResponse.getHits().getTotalHits().value;
+        totalNudgeTickets = totalNudgeTickets + searchPriorityResponse.getHits().getTotalHits().value;
+        totalOpenTicketGte21 = totalOpenTicketGte21 + searchOpenTicketsGte21Response.getHits().getTotalHits().value;
+        long totalTicketsCount = searchJunkResponse.getHits().getTotalHits().value + searchOpenStatusResponse.getHits().getTotalHits().value
+                + searchClosedStatusResponse.getHits().getTotalHits().value + searchIsEsclatedResponse.getHits().getTotalHits().value
+                + searchOpenTicketsGte15Response.getHits().getTotalHits().value + searchUnassignedResponse.getHits().getTotalHits().value;
+        response.put(Constants.TOTAL_TICKETS, totalTicketsCount);
         response.put(Constants.IS_JUNK, searchJunkResponse.getHits().getTotalHits().value);
         response.put(Constants.IS_OPEN, searchOpenStatusResponse.getHits().getTotalHits().value);
         response.put(Constants.IS_CLOSED, searchClosedStatusResponse.getHits().getTotalHits().value);
         response.put(Constants.IS_ESCALATED, searchIsEsclatedResponse.getHits().getTotalHits().value);
-        assignmentResponse.put(Constants.ASSESSMENT_MATRIX,response);
-        if(cc.equals(Constants.ASSESSMENT)){
-            departmentNameResponse.put(Constants.ASSESSMENT_DEPARTMENT,response);
+        response.put(Constants.UNASSIGNED, searchUnassignedResponse.getHits().getTotalHits().value);
+        response.put(Constants.OPEN_TICKET_GTE15, searchOpenTicketsGte15Response.getHits().getTotalHits().value);
+
+        if (cc.equals(Constants.ASSESSMENT)) {
+            departmentNameResponse.put(Constants.ASSESSMENT_DEPARTMENT, response);
         } else if (cc.equals(Constants.AFFILIATION)) {
-            departmentNameResponse.put(Constants.AFFILIATION_NAME,response);
+            departmentNameResponse.put(Constants.AFFILIATION_NAME, response);
         } else if (cc.equals(Constants.EXAM)) {
-            departmentNameResponse.put(Constants.EXAM_NAME,response);
+            departmentNameResponse.put(Constants.EXAM_NAME, response);
         } else if (cc.equals(Constants.REGISTRATION)) {
-            departmentNameResponse.put(Constants.REGISTRATION_NAME,response);
+            departmentNameResponse.put(Constants.REGISTRATION_NAME, response);
         } else if (cc.equals(Constants.ADMISSION)) {
-            departmentNameResponse.put(Constants.ADMISSION_NAME,response);
+            departmentNameResponse.put(Constants.ADMISSION_NAME, response);
         }
-        resolutionResponse.put(Constants.RESOLUTION_MATRIX,departmentNameResponse);
-        //finalResponse.put()
-        return response;
+        if (totalFinalResponse) {
+            getResponse();
+        }
+        if (multiSelectResponse) {
+            getResponse();
+        }
+        finalResponse.put(Constants.RESOLUTION_MATRIX, departmentNameResponse);
     }
 
-    private SearchResponse getDashboardSearchResponse(SearchRequest searchRequest, String reportType, Long cc) {
+    private void getResponse() {
+        Map<String, Object> response = new HashMap<>();
+        long totalTicketsCount = totalIsJunk + totalIsEscalated + totalOpenStatus + totalcloseStatus + totalUnassigned;
+        response.put(Constants.TOTAL_TICKETS, totalTicketsCount);
+        response.put(Constants.IS_JUNK, totalIsJunk);
+        response.put(Constants.IS_OPEN, totalOpenStatus);
+        response.put(Constants.IS_CLOSED, totalcloseStatus);
+        response.put(Constants.IS_ESCALATED, totalIsEscalated);
+        response.put(Constants.UNASSIGNED, totalUnassigned);
+        finalResponse.put(Constants.ASSESSMENT_MATRIX, response);
+
+        performanceIndicatorsResponse = new HashMap<>();
+        performanceIndicatorsResponse.put(Constants.TURN_AROUND_TIME, 0 +" days");
+        performanceIndicatorsResponse.put(Constants.ESCLATION_PERCENTAGE, (int) Math.round((double) (totalIsEscalated / totalTicketsCount) * 100) + "%");
+        performanceIndicatorsResponse.put(Constants.NUDGE_TICKET_PERCENTAGE, (int) Math.round((double) (totalNudgeTickets) / totalTicketsCount * 100) + "%");
+        performanceIndicatorsResponse.put(Constants.OPEN_TICKET_GTE21, totalOpenTicketGte21);
+        finalResponse.put(Constants.PERFORMANCE_INDICATORS, performanceIndicatorsResponse);
+    }
+
+    private SearchResponse getDashboardSearchResponse(SearchRequest searchRequest, String reportType, Long cc, String flag) {
         SearchResponse searchResponse;
         BoolQueryBuilder finalQuery = QueryBuilders.boolQuery();
-        finalQuery = getDateRangeQuery(searchRequest, finalQuery);
+        if (flag != null && flag.equals("isGte21")) {
+            finalQuery = getGte21DaysQuery(searchRequest, finalQuery);
+        } else if (flag != null && flag.equals("isGte15")) {
+            finalQuery = getGte15DaysQuery(searchRequest, finalQuery);
+        } else {
+            finalQuery = getDateRangeQuery(searchRequest, finalQuery);
+        }
         finalQuery = getCCRangeQuery(cc, finalQuery);
         if (reportType.equals("isJunk")) {
             finalQuery = getJunkQuery(true, finalQuery);
@@ -121,8 +217,11 @@ public class SearchServiceImpl implements SearchService {
             List<String> list = new ArrayList<>();
             list.add("CLOSED");
             finalQuery = getStatusQuery(list, finalQuery);
+            finalQuery = getJunkQuery(false, finalQuery);
         } else if (reportType.equals("isEscalated")) {
             finalQuery = getEsclatedTicketsQuery(true, finalQuery);
+        } else if (reportType.equals("highPriority")) {
+            finalQuery = getPriority("HIGH", finalQuery);
         }
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                 .query(finalQuery);
@@ -153,7 +252,26 @@ public class SearchServiceImpl implements SearchService {
     private SearchResponse getSearchResponse(SearchRequest searchRequest) {
         SearchResponse searchResponse;
         String keyValue = searchRequest.getSort().keySet().iterator().next();
-        switch (keyValue){
+        keyValue = getKeyValue(keyValue);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                .query(createTicketSearchQuery(searchRequest))
+                .from(searchRequest.getPage())
+                .size(searchRequest.getSize())
+                .sort(keyValue, SortOrder.valueOf(searchRequest.getSort().get(searchRequest.getSort().keySet().iterator().next()).toUpperCase()));
+
+        org.elasticsearch.action.search.SearchRequest search = new org.elasticsearch.action.search.SearchRequest("ticket");
+        search.searchType(SearchType.QUERY_THEN_FETCH);
+        search.source(searchSourceBuilder);
+        try {
+            searchResponse = esConfig.elasticsearchClient().search(search, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return searchResponse;
+    }
+
+    private String getKeyValue(String keyValue) {
+        switch (keyValue) {
             case "ticketId":
                 keyValue = "ticket_id";
                 break;
@@ -224,151 +342,136 @@ public class SearchServiceImpl implements SearchService {
                 keyValue = "escalated_by";
                 break;
         }
-        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
-                .query(createTicketSearchQuery(searchRequest))
-                .from(searchRequest.getPage())
-                .size(searchRequest.getSize())
-                .sort(keyValue, SortOrder.valueOf(searchRequest.getSort().get(searchRequest.getSort().keySet().iterator().next()).toUpperCase()));
-
-        org.elasticsearch.action.search.SearchRequest search = new org.elasticsearch.action.search.SearchRequest("ticket");
-        search.searchType(SearchType.QUERY_THEN_FETCH);
-        search.source(searchSourceBuilder);
-        try {
-            searchResponse = esConfig.elasticsearchClient().search(search, RequestOptions.DEFAULT);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        return searchResponse;
+        return keyValue;
     }
 
-    private static List<Object> getDocumentsFromSearchResult(SearchResponse result) {
+    private List<Object> getDocumentsFromSearchResult(SearchResponse result) {
         SearchHits hits = result.getHits();
         return getDocumentsFromHits(hits);
     }
 
-    private static List<Object> getDocumentsFromHits(SearchHits hits) {
+    private List<Object> getDocumentsFromHits(SearchHits hits) {
         List<Object> documents = new ArrayList<Object>();
         for (SearchHit hit : hits) {
             Ticket esTicket = new Ticket();
             for (Map.Entry entry : hit.getSourceAsMap().entrySet()) {
                 String key = (String) entry.getKey();
-                switch (key) {
-                    case "ticket_id":
-                        Long longValue = ((Number) entry.getValue()).longValue();
-                        esTicket.setTicketId(longValue);
-                        break;
-                    case "requester_first_name":
-                        esTicket.setFirstName((String) entry.getValue());
-                        break;
-                    case "requester_last_name":
-                        esTicket.setLastName((String) entry.getValue());
-                        break;
-                    case "requester_phone":
-                        esTicket.setPhone((String) entry.getValue());
-                        break;
-                    case "requester_email":
-                        esTicket.setEmail((String) entry.getValue());
-                        break;
-                    case "requester_type":
-                        for (RequesterType enumValue : RequesterType.values()) {
-                            if (enumValue.name().equals(entry.getValue().toString())) {
-                                esTicket.setRequesterType(enumValue);
-                                break;
-                            }
-                        }
-                        break;
-                    case "assigned_to_id":
-                        longValue = ((Number) entry.getValue()).longValue();
-                        esTicket.setAssignedToId(longValue);
-                        break;
-                    case "assigned_to_name":
-                        esTicket.setAssignedToName((String) entry.getValue());
-                        break;
-                    case "description":
-                        esTicket.setDescription((String) entry.getValue());
-                        break;
-                    case "is_junk":
-                        esTicket.setJunk((Boolean) entry.getValue());
-                        break;
-                    case "created_date":
-                        esTicket.setCreatedDate((String) entry.getValue());
-                        break;
-                    case "updated_date":
-                        esTicket.setUpdatedDate((String) entry.getValue());
-                        break;
-                    case "created_date_ts":
-                        longValue = ((Number) entry.getValue()).longValue();
-                        esTicket.setCreatedDateTS(longValue);
-                        break;
-                    case "updated_date_ts":
-                        longValue = ((Number) entry.getValue()).longValue();
-                        esTicket.setUpdatedDateTS(longValue);
-                        break;
-                    case "last_updated_by":
-                        longValue = ((Number) entry.getValue()).longValue();
-                        esTicket.setLastUpdatedBy(longValue);
-                        break;
-                    case "is_escalated":
-                        esTicket.setEscalated((Boolean) entry.getValue());
-                        break;
-                    case "escalated_date":
-                        esTicket.setEscalatedDate((String) entry.getValue());
-                        break;
-                    case "escalated_date_ts":
-                        longValue = ((Number) entry.getValue()).longValue();
-                        esTicket.setEscalatedDateTS(longValue);
-                        break;
-                    case "escalated_to":
-                        longValue = ((Number) entry.getValue()).longValue();
-                        esTicket.setEscalatedTo(longValue);
-                        break;
-                    case "status":
-                        for (TicketStatus enumValue : TicketStatus.values()) {
-                            if (enumValue.name().equals(entry.getValue().toString())) {
-                                esTicket.setStatus(enumValue);
-                                break;
-                            }
-                        }
-                        break;
-                    case "request_type":
-                        esTicket.setRequestType((String) entry.getValue());
-                        break;
-                    case "priority":
-                        for (TicketPriority enumValue : TicketPriority.values()) {
-                            if (enumValue.name().equals(entry.getValue().toString())) {
-                                esTicket.setPriority(enumValue);
-                                break;
-                            }
-                        }
-                        break;
-                    case "escalated_by":
-                        longValue = ((Number) entry.getValue()).longValue();
-                        esTicket.setEscalatedBy(longValue);
-                        break;
-                }
+                mapEsTicketDtoToTicketDto(entry, key, esTicket);
             }
             documents.add(esTicket);
         }
         return documents;
     }
 
+    private void mapEsTicketDtoToTicketDto(Map.Entry entry, String key, Ticket esTicket) {
+        switch (key) {
+            case "ticket_id":
+                Long longValue = ((Number) entry.getValue()).longValue();
+                esTicket.setTicketId(longValue);
+                break;
+            case "requester_first_name":
+                esTicket.setFirstName((String) entry.getValue());
+                break;
+            case "requester_last_name":
+                esTicket.setLastName((String) entry.getValue());
+                break;
+            case "requester_phone":
+                esTicket.setPhone((String) entry.getValue());
+                break;
+            case "requester_email":
+                esTicket.setEmail((String) entry.getValue());
+                break;
+            case "requester_type":
+                for (RequesterType enumValue : RequesterType.values()) {
+                    if (enumValue.name().equals(entry.getValue().toString())) {
+                        esTicket.setRequesterType(enumValue);
+                        break;
+                    }
+                }
+                break;
+            case "assigned_to_id":
+                longValue = ((Number) entry.getValue()).longValue();
+                esTicket.setAssignedToId(longValue);
+                break;
+            case "assigned_to_name":
+                esTicket.setAssignedToName((String) entry.getValue());
+                break;
+            case "description":
+                esTicket.setDescription((String) entry.getValue());
+                break;
+            case "is_junk":
+                esTicket.setJunk((Boolean) entry.getValue());
+                break;
+            case "created_date":
+                esTicket.setCreatedDate((String) entry.getValue());
+                break;
+            case "updated_date":
+                esTicket.setUpdatedDate((String) entry.getValue());
+                break;
+            case "created_date_ts":
+                longValue = ((Number) entry.getValue()).longValue();
+                esTicket.setCreatedDateTS(longValue);
+                break;
+            case "updated_date_ts":
+                longValue = ((Number) entry.getValue()).longValue();
+                esTicket.setUpdatedDateTS(longValue);
+                break;
+            case "last_updated_by":
+                longValue = ((Number) entry.getValue()).longValue();
+                esTicket.setLastUpdatedBy(longValue);
+                break;
+            case "is_escalated":
+                esTicket.setEscalated((Boolean) entry.getValue());
+                break;
+            case "escalated_date":
+                esTicket.setEscalatedDate((String) entry.getValue());
+                break;
+            case "escalated_date_ts":
+                longValue = ((Number) entry.getValue()).longValue();
+                esTicket.setEscalatedDateTS(longValue);
+                break;
+            case "escalated_to":
+                longValue = ((Number) entry.getValue()).longValue();
+                esTicket.setEscalatedTo(longValue);
+                break;
+            case "status":
+                for (TicketStatus enumValue : TicketStatus.values()) {
+                    if (enumValue.name().equals(entry.getValue().toString())) {
+                        esTicket.setStatus(enumValue);
+                        break;
+                    }
+                }
+                break;
+            case "request_type":
+                esTicket.setRequestType((String) entry.getValue());
+                break;
+            case "priority":
+                for (TicketPriority enumValue : TicketPriority.values()) {
+                    if (enumValue.name().equals(entry.getValue().toString())) {
+                        esTicket.setPriority(enumValue);
+                        break;
+                    }
+                }
+                break;
+            case "escalated_by":
+                longValue = ((Number) entry.getValue()).longValue();
+                esTicket.setEscalatedBy(longValue);
+                break;
+        }
+    }
+
     private BoolQueryBuilder createTicketSearchQuery(SearchRequest searchRequest) {
         BoolQueryBuilder finalQuery = QueryBuilders.boolQuery();
         // search by keyword
         if (searchRequest.getSearchKeyword() != null && !searchRequest.getSearchKeyword().isBlank()) {
-            RegexpQueryBuilder firstNameKeywordMatchQuery = QueryBuilders.regexpQuery("requester_first_name", ".*"+searchRequest.getSearchKeyword().toLowerCase()+".*");
-            RegexpQueryBuilder phoneKeywordMatchQuery = QueryBuilders.regexpQuery("requester_phone", ".*"+searchRequest.getSearchKeyword().toLowerCase()+".*");
-            RegexpQueryBuilder emailKeywordMatchQuery = QueryBuilders.regexpQuery("requester_email", ".*"+searchRequest.getSearchKeyword().toLowerCase()+".*");
+            RegexpQueryBuilder firstNameKeywordMatchQuery = QueryBuilders.regexpQuery("requester_first_name", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
+            RegexpQueryBuilder phoneKeywordMatchQuery = QueryBuilders.regexpQuery("requester_phone", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
+            RegexpQueryBuilder emailKeywordMatchQuery = QueryBuilders.regexpQuery("requester_email", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             BoolQueryBuilder keywordSearchQuery = QueryBuilders.boolQuery();
             keywordSearchQuery.should(firstNameKeywordMatchQuery).should(phoneKeywordMatchQuery).should(emailKeywordMatchQuery);
             finalQuery.must(keywordSearchQuery);
         }
-        if (searchRequest.getPriority() != null) {
-            MatchQueryBuilder priorityMatchQuery = QueryBuilders.matchQuery("priority", searchRequest.getPriority());
-            BoolQueryBuilder prioritySearchQuery = QueryBuilders.boolQuery();
-            prioritySearchQuery.must(priorityMatchQuery);
-            finalQuery.must(prioritySearchQuery);
-        }
+        getPriority(String.valueOf(searchRequest.getPriority()), finalQuery);
         getCCRangeQuery(((Number) searchRequest.getFilter().get("cc")).longValue(), finalQuery);
         getDateRangeQuery(searchRequest, finalQuery);
         getStatusQuery((List<String>) searchRequest.getFilter().get("status"), finalQuery);
@@ -377,7 +480,17 @@ public class SearchServiceImpl implements SearchService {
         return finalQuery;
     }
 
-    private static BoolQueryBuilder getCCRangeQuery(Long cc, BoolQueryBuilder finalQuery) {
+    private BoolQueryBuilder getPriority(String priority, BoolQueryBuilder finalQuery) {
+        if (priority != null) {
+            MatchQueryBuilder priorityMatchQuery = QueryBuilders.matchQuery("priority", priority);
+            BoolQueryBuilder prioritySearchQuery = QueryBuilders.boolQuery();
+            prioritySearchQuery.must(priorityMatchQuery);
+            finalQuery.must(prioritySearchQuery);
+        }
+        return finalQuery;
+    }
+
+    private BoolQueryBuilder getCCRangeQuery(Long cc, BoolQueryBuilder finalQuery) {
         if (cc != null) {
             MatchQueryBuilder ccMatchQuery = QueryBuilders.matchQuery("assigned_to_id", cc);
             BoolQueryBuilder ccSearchQuery = QueryBuilders.boolQuery();
@@ -387,7 +500,7 @@ public class SearchServiceImpl implements SearchService {
         return finalQuery;
     }
 
-    private static BoolQueryBuilder getJunkQuery(Boolean isJunk, BoolQueryBuilder finalQuery) {
+    private BoolQueryBuilder getJunkQuery(Boolean isJunk, BoolQueryBuilder finalQuery) {
         if (isJunk != null) {
             MatchQueryBuilder junkMatchQuery = QueryBuilders.matchQuery("is_junk", isJunk);
             BoolQueryBuilder junkSearchQuery = QueryBuilders.boolQuery();
@@ -397,7 +510,7 @@ public class SearchServiceImpl implements SearchService {
         return finalQuery;
     }
 
-    private static BoolQueryBuilder getEsclatedTicketsQuery(Boolean isEscalated, BoolQueryBuilder finalQuery) {
+    private BoolQueryBuilder getEsclatedTicketsQuery(Boolean isEscalated, BoolQueryBuilder finalQuery) {
         if (isEscalated != null) {
             MatchQueryBuilder esclatedMatchQuery = QueryBuilders.matchQuery("is_escalated", isEscalated);
             BoolQueryBuilder esclatedSearchQuery = QueryBuilders.boolQuery();
@@ -407,7 +520,7 @@ public class SearchServiceImpl implements SearchService {
         return finalQuery;
     }
 
-    private static BoolQueryBuilder getStatusQuery(List<String> statusList, BoolQueryBuilder finalQuery) {
+    private BoolQueryBuilder getStatusQuery(List<String> statusList, BoolQueryBuilder finalQuery) {
         if (statusList != null) {
             MatchQueryBuilder statusMatchQuery = null;
             BoolQueryBuilder statusSearchQuery = QueryBuilders.boolQuery();
@@ -421,7 +534,7 @@ public class SearchServiceImpl implements SearchService {
         return finalQuery;
     }
 
-    private static BoolQueryBuilder getDateRangeQuery(SearchRequest searchRequest, BoolQueryBuilder finalQuery) {
+    private BoolQueryBuilder getDateRangeQuery(SearchRequest searchRequest, BoolQueryBuilder finalQuery) {
         if (searchRequest.getDate() != null && searchRequest.getDate().getFrom() != null && searchRequest.getDate().getFrom() > 0) {
             RangeQueryBuilder fromTimestampMatchQuery = QueryBuilders.rangeQuery("created_date_ts").gte(searchRequest.getDate().getFrom());
             if (searchRequest.getDate().getTo() != null && searchRequest.getDate().getTo() > 0) {
@@ -431,6 +544,24 @@ public class SearchServiceImpl implements SearchService {
             timestampSearchQuery.must(fromTimestampMatchQuery);
             finalQuery.must(timestampSearchQuery);
         }
+        return finalQuery;
+    }
+
+    private BoolQueryBuilder getGte15DaysQuery(SearchRequest searchRequest, BoolQueryBuilder finalQuery) {
+        Instant currentTimestamp = Instant.now();
+        RangeQueryBuilder fromTimestampMatchQuery = QueryBuilders.rangeQuery("created_date_ts").lte(currentTimestamp.minus(PENDING_15_DAYS, ChronoUnit.DAYS).toEpochMilli());
+        BoolQueryBuilder timestampSearchQuery = QueryBuilders.boolQuery();
+        timestampSearchQuery.must(fromTimestampMatchQuery);
+        finalQuery.must(timestampSearchQuery);
+        return finalQuery;
+    }
+
+    private BoolQueryBuilder getGte21DaysQuery(SearchRequest searchRequest, BoolQueryBuilder finalQuery) {
+        Instant currentTimestamp = Instant.now();
+        RangeQueryBuilder fromTimestampMatchQuery = QueryBuilders.rangeQuery("created_date_ts").lte(currentTimestamp.minus(PENDING_21_DAYS, ChronoUnit.DAYS).toEpochMilli());
+        BoolQueryBuilder timestampSearchQuery = QueryBuilders.boolQuery();
+        timestampSearchQuery.must(fromTimestampMatchQuery);
+        finalQuery.must(timestampSearchQuery);
         return finalQuery;
     }
 }
