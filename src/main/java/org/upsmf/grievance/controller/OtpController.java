@@ -12,7 +12,7 @@ import org.upsmf.grievance.model.OtpValidationRequest;
 import org.upsmf.grievance.service.OtpService;
 
 @RestController
-@RequestMapping("/otp")
+@RequestMapping("/api/otp")
 public class OtpController {
 
     @Autowired

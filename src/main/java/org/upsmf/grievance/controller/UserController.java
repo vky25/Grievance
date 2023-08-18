@@ -12,7 +12,7 @@ import org.upsmf.grievance.service.IntegrationService;
 
 
 @Controller
-@RequestMapping("/user")
+@RequestMapping("/api/user")
 public class UserController {
 
 

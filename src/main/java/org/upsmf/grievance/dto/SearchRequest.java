@@ -20,11 +20,13 @@ public class SearchRequest {
 
     private List<String> status;
 
-    private String cc;
+    private Long cc;
 
-    private Timestamp date;
+    private SearchDateRange date;
 
     private Boolean isJunk;
+
+    private Boolean isEscalated;
 
     private TicketPriority priority;
 

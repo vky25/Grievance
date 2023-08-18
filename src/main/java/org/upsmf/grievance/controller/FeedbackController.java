@@ -16,7 +16,7 @@ import org.upsmf.grievance.service.FeedbackService;
 import javax.validation.Valid;
 
 @Controller
-@RequestMapping("/feedback")
+@RequestMapping("/api/feedback")
 @Validated
 public class FeedbackController {
 
