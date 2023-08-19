@@ -24,6 +24,8 @@ public class User {
 
     private String firstName;
 
+    private String lastname;
+
     @Column(nullable=false)
     private String username;
 
@@ -34,7 +36,13 @@ public class User {
 
     private int status;
 
+    private String phoneNumber;
+
     private String[] roles;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Department department;
+
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -43,4 +51,5 @@ public class User {
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
    private Set<Role> rolesList = new HashSet<>();
+
 }

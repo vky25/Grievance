@@ -1,6 +1,7 @@
 package org.upsmf.grievance.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.micrometer.core.instrument.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.mail.javamail.JavaMailSender;
@@ -26,6 +27,7 @@ import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Optional;
+import java.util.regex.Pattern;
 
 @Service
 public class TicketServiceImpl implements TicketService {
@@ -99,7 +101,8 @@ public class TicketServiceImpl implements TicketService {
     @Override
     @Transactional
     public Ticket save(TicketRequest ticketRequest) throws Exception {
-        // TODO validate request
+        // validate request
+        validateTicketRequest(ticketRequest);
         // validate OTP
         boolean isValid = otpService.validateOtp(ticketRequest.getEmail(), ticketRequest.getOtp());
         if(!isValid) {
@@ -152,7 +155,8 @@ public class TicketServiceImpl implements TicketService {
     @Override
     @Transactional
     public Ticket update(UpdateTicketRequest updateTicketRequest) {
-        // TODO validate ticket
+        //  validate ticket
+        validateUpdateTicketRequest(updateTicketRequest);
         // check if the ticket exists
         Optional<Ticket> ticketDetails = getTicketDetailsByID(updateTicketRequest.getId());
         Ticket ticket = null;
@@ -173,7 +177,13 @@ public class TicketServiceImpl implements TicketService {
             // TODO revisit this
             esTicketRepository.deleteById(esTicketDetails.get().getId());
         }
-        esTicketRepository.save(updatedESTicket);
+        org.upsmf.grievance.model.es.Ticket curentUpdatedTicket=esTicketRepository.save(updatedESTicket);
+        //send mail to enduser
+        // TODO get email subject and body from db
+        TicketStatus currentTicketStatus=curentUpdatedTicket.getStatus();
+        curentUpdatedTicket.getEmail();
+        curentUpdatedTicket.getTicketId();
+        otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "updated Ticket for " +curentUpdatedTicket.getTicketId() ,"ticket as updated to" +curentUpdatedTicket.getStatus().name());
         return ticket;
     }
 
@@ -278,5 +288,61 @@ public class TicketServiceImpl implements TicketService {
      */
     public Optional<Ticket> getTicketDetailsByID(long id) {
         return ticketRepository.findById(id);
+    }
+
+    private void validateTicketRequest(TicketRequest ticketRequest) throws Exception{
+        if(ticketRequest==null){
+            throw new IllegalArgumentException("Ticket request cannot be null");
+        }
+        if(StringUtils.isBlank(ticketRequest.getFirstName())||StringUtils.isBlank(ticketRequest.getLastName())){
+            throw new IllegalArgumentException("First name and last name are required");
+        }
+
+        if (StringUtils.isBlank(ticketRequest.getEmail())) {
+            throw new IllegalArgumentException("Email is required");
+        }
+        if (!isValidPhoneNumber(ticketRequest.getPhone())) {
+            throw new IllegalArgumentException("Invalid phone number");
+        }
+
+        if (ticketRequest.getUserType() == null) {
+            throw new IllegalArgumentException("User type is required");
+        }
+        if (ticketRequest.getAttachmentURls() != null) {
+            for (String attachmentUrl : ticketRequest.getAttachmentURls()) {
+                if (StringUtils.isBlank(attachmentUrl)) {
+                    throw new IllegalArgumentException("Invalid attachment URL");
+                }
+            }
+        }
+    }
+    private boolean isValidPhoneNumber(String phoneNumber) {
+        // Validate phone number format using a regular expression
+        String phonePattern = "\\d{10}";
+        return Pattern.matches(phonePattern, phoneNumber);
+    }
+
+    private boolean isValidStatus(TicketStatus status) {
+        return status == TicketStatus.OPEN ||  status==TicketStatus.CLOSED;
+    }
+
+    private boolean isValidPriority(TicketPriority priority) {
+        return priority == TicketPriority.LOW || priority == TicketPriority.MEDIUM ||priority==TicketPriority.HIGH;
+    }
+
+    private void validateUpdateTicketRequest(UpdateTicketRequest request) {
+        if (request == null) {
+            throw new IllegalArgumentException("Update ticket request is null");
+        }
+
+        if (request.getStatus() == null || !isValidStatus(request.getStatus())) {
+            throw new IllegalArgumentException("Invalid ticket status");
+        }
+
+        if (request.getPriority() == null || !isValidPriority(request.getPriority())) {
+            throw new IllegalArgumentException("Invalid ticket priority");
+        }
+
+
     }
 }

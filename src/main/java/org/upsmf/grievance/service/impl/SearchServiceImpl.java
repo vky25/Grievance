@@ -20,6 +20,9 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.upsmf.grievance.config.EsConfig;
 import org.upsmf.grievance.dto.SearchRequest;
+import org.upsmf.grievance.enums.RequesterType;
+import org.upsmf.grievance.enums.TicketPriority;
+import org.upsmf.grievance.enums.TicketStatus;
 import org.upsmf.grievance.model.es.Ticket;
 import org.upsmf.grievance.model.reponse.TicketResponse;
 import org.upsmf.grievance.repository.es.TicketRepository;
@@ -51,9 +54,65 @@ public class SearchServiceImpl implements SearchService {
     }
 
     @Override
+    public Map<String, Object> dashboardReport(SearchRequest searchRequest) {
+        //Create query for search by keyword
+        SearchResponse searchJunkResponse = getDashboardSearchResponse(searchRequest, "isJunk");
+        SearchResponse searchOpenStatusResponse = getDashboardSearchResponse(searchRequest, "openStatus");
+        SearchResponse searchClosedStatusResponse = getDashboardSearchResponse(searchRequest, "closedStatus");
+        SearchResponse searchIsEsclatedResponse = getDashboardSearchResponse(searchRequest, "isEscalated");
+        Map<String, Object> response = new HashMap<>();
+        response.put("isJunk", searchJunkResponse.getHits().getTotalHits().value);
+        response.put("isOpen", searchOpenStatusResponse.getHits().getTotalHits().value);
+        response.put("isClosed", searchClosedStatusResponse.getHits().getTotalHits().value);
+        response.put("isEscalated", searchIsEsclatedResponse.getHits().getTotalHits().value);
+        return response;
+    }
+
+    private SearchResponse getDashboardSearchResponse(SearchRequest searchRequest, String reportType) {
+        SearchResponse searchResponse;
+        BoolQueryBuilder finalQuery = QueryBuilders.boolQuery();
+        finalQuery = getDateRangeQuery(searchRequest, finalQuery);
+        if (reportType.equals("isJunk")) {
+            finalQuery = getJunkQuery(true, finalQuery);
+        } else if (reportType.equals("openStatus")) {
+            List<String> list = new ArrayList<>();
+            list.add("OPEN");
+            finalQuery = getStatusQuery(list, finalQuery);
+        } else if (reportType.equals("closedStatus")) {
+            List<String> list = new ArrayList<>();
+            list.add("CLOSED");
+            finalQuery = getStatusQuery(list, finalQuery);
+        } else if (reportType.equals("isEscalated")) {
+            finalQuery = getEsclatedTicketsQuery(true, finalQuery);
+        }
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                .query(finalQuery);
+
+        org.elasticsearch.action.search.SearchRequest search = new org.elasticsearch.action.search.SearchRequest("ticket");
+        search.searchType(SearchType.QUERY_THEN_FETCH);
+        search.source(searchSourceBuilder);
+        try {
+            searchResponse = esConfig.elasticsearchClient().search(search, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return searchResponse;
+    }
+
+    @Override
     public Map<String, Object> searchTickets(SearchRequest searchRequest) {
         //Create query for search by keyword
         SearchResponse searchResponse = null;
+        searchResponse = getSearchResponse(searchRequest);
+        Map<String, Object> response = new HashMap<>();
+        List<Object> results = getDocumentsFromSearchResult(searchResponse);
+        response.put("count", searchResponse.getHits().getTotalHits().value);
+        response.put("results", results);
+        return response;
+    }
+
+    private SearchResponse getSearchResponse(SearchRequest searchRequest) {
+        SearchResponse searchResponse;
         String keyValue = searchRequest.getSort().keySet().iterator().next();
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                 .query(createTicketSearchQuery(searchRequest))
@@ -69,11 +128,7 @@ public class SearchServiceImpl implements SearchService {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        Map<String, Object> response = new HashMap<>();
-        List<Object> results = getDocumentsFromSearchResult(searchResponse);
-        response.put("count", searchResponse.getHits().getTotalHits().value);
-        response.put("results", results);
-        return response;
+        return searchResponse;
     }
 
     private static List<Object> getDocumentsFromSearchResult(SearchResponse result) {
@@ -84,7 +139,105 @@ public class SearchServiceImpl implements SearchService {
     private static List<Object> getDocumentsFromHits(SearchHits hits) {
         List<Object> documents = new ArrayList<Object>();
         for (SearchHit hit : hits) {
-            documents.add(hit.getSourceAsMap());
+            Ticket esTicket = new Ticket();
+            for (Map.Entry entry : hit.getSourceAsMap().entrySet()) {
+                String key = (String) entry.getKey();
+                switch (key) {
+                    case "ticket_id":
+                        Long longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setTicketId(longValue);
+                        break;
+                    case "requester_first_name":
+                        esTicket.setFirstName((String) entry.getValue());
+                        break;
+                    case "requester_last_name":
+                        esTicket.setLastName((String) entry.getValue());
+                        break;
+                    case "requester_phone":
+                        esTicket.setPhone((String) entry.getValue());
+                        break;
+                    case "requester_email":
+                        esTicket.setEmail((String) entry.getValue());
+                        break;
+                    case "requester_type":
+                        for (RequesterType enumValue : RequesterType.values()) {
+                            if (enumValue.name().equals(entry.getValue().toString())) {
+                                esTicket.setRequesterType(enumValue);
+                                break;
+                            }
+                        }
+                        break;
+                    case "assigned_to_id":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setAssignedToId(longValue);
+                        break;
+                    case "assigned_to_name":
+                        esTicket.setAssignedToName((String) entry.getValue());
+                        break;
+                    case "description":
+                        esTicket.setDescription((String) entry.getValue());
+                        break;
+                    case "is_junk":
+                        esTicket.setJunk((Boolean) entry.getValue());
+                        break;
+                    case "created_date":
+                        esTicket.setCreatedDate((String) entry.getValue());
+                        break;
+                    case "updated_date":
+                        esTicket.setUpdatedDate((String) entry.getValue());
+                        break;
+                    case "created_date_ts":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setCreatedDateTS(longValue);
+                        break;
+                    case "updated_date_ts":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setUpdatedDateTS(longValue);
+                        break;
+                    case "last_updated_by":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setLastUpdatedBy(longValue);
+                        break;
+                    case "is_escalated":
+                        esTicket.setEscalated((Boolean) entry.getValue());
+                        break;
+                    case "escalated_date":
+                        esTicket.setEscalatedDate((String) entry.getValue());
+                        break;
+                    case "escalated_date_ts":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setEscalatedDateTS(longValue);
+                        break;
+                    case "escalated_to":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setEscalatedTo(longValue);
+                        break;
+                    case "status":
+                        for (TicketStatus enumValue : TicketStatus.values()) {
+                            if (enumValue.name().equals(entry.getValue().toString())) {
+                                esTicket.setStatus(enumValue);
+                                break;
+                            }
+                        }
+                        break;
+                    case "request_type":
+                        esTicket.setRequestType((String) entry.getValue());
+                        break;
+                    case "priority":
+                        for (TicketPriority enumValue : TicketPriority.values()) {
+                            if (enumValue.name().equals(entry.getValue().toString())) {
+                                esTicket.setPriority(enumValue);
+                                break;
+                            }
+                        }
+                        break;
+                    case "escalated_by":
+                        longValue = ((Number) entry.getValue()).longValue();
+                        esTicket.setEscalatedBy(longValue);
+                        break;
+                }
+            }
+            documents.add(esTicket);
         }
         return documents;
     }
@@ -100,6 +253,60 @@ public class SearchServiceImpl implements SearchService {
             keywordSearchQuery.should(firstNameKeywordMatchQuery).should(phoneKeywordMatchQuery).should(emailKeywordMatchQuery);
             finalQuery.must(keywordSearchQuery);
         }
+        if (searchRequest.getPriority() != null) {
+            MatchQueryBuilder priorityMatchQuery = QueryBuilders.matchQuery("priority", searchRequest.getPriority());
+            BoolQueryBuilder prioritySearchQuery = QueryBuilders.boolQuery();
+            prioritySearchQuery.must(priorityMatchQuery);
+            finalQuery.must(prioritySearchQuery);
+        }
+        if (searchRequest.getFilter().get("cc") != null) {
+            MatchQueryBuilder ccMatchQuery = QueryBuilders.matchQuery("assigned_to_id", searchRequest.getFilter().get("cc"));
+            BoolQueryBuilder ccSearchQuery = QueryBuilders.boolQuery();
+            ccSearchQuery.must(ccMatchQuery);
+            finalQuery.must(ccSearchQuery);
+        }
+        getDateRangeQuery(searchRequest, finalQuery);
+        getStatusQuery((List<String>) searchRequest.getFilter().get("status"), finalQuery);
+        getJunkQuery(searchRequest.getIsJunk(), finalQuery);
+        getEsclatedTicketsQuery(searchRequest.getIsEscalated(), finalQuery);
+        return finalQuery;
+    }
+
+    private static BoolQueryBuilder getJunkQuery(Boolean isJunk, BoolQueryBuilder finalQuery) {
+        if (isJunk != null) {
+            MatchQueryBuilder junkMatchQuery = QueryBuilders.matchQuery("is_junk", isJunk);
+            BoolQueryBuilder junkSearchQuery = QueryBuilders.boolQuery();
+            junkSearchQuery.must(junkMatchQuery);
+            finalQuery.must(junkSearchQuery);
+        }
+        return finalQuery;
+    }
+
+    private static BoolQueryBuilder getEsclatedTicketsQuery(Boolean isEscalated, BoolQueryBuilder finalQuery) {
+        if (isEscalated != null) {
+            MatchQueryBuilder esclatedMatchQuery = QueryBuilders.matchQuery("is_escalated", isEscalated);
+            BoolQueryBuilder esclatedSearchQuery = QueryBuilders.boolQuery();
+            esclatedSearchQuery.must(esclatedMatchQuery);
+            finalQuery.must(esclatedSearchQuery);
+        }
+        return finalQuery;
+    }
+
+    private static BoolQueryBuilder getStatusQuery(List<String> statusList, BoolQueryBuilder finalQuery) {
+        if (statusList != null) {
+            MatchQueryBuilder statusMatchQuery = null;
+            BoolQueryBuilder statusSearchQuery = QueryBuilders.boolQuery();
+            for (int i = 0; i < statusList.size(); i++) {
+                statusMatchQuery = QueryBuilders.matchQuery("status", statusList.get(i));
+                statusSearchQuery.should(statusMatchQuery);
+            }
+            finalQuery.must(statusSearchQuery);
+
+        }
+        return finalQuery;
+    }
+
+    private static BoolQueryBuilder getDateRangeQuery(SearchRequest searchRequest, BoolQueryBuilder finalQuery) {
         if (searchRequest.getDate() != null && searchRequest.getDate().getFrom() != null && searchRequest.getDate().getFrom() > 0) {
             RangeQueryBuilder fromTimestampMatchQuery = QueryBuilders.rangeQuery("created_date_ts").gte(searchRequest.getDate().getFrom());
             if (searchRequest.getDate().getTo() != null && searchRequest.getDate().getTo() > 0) {
@@ -108,43 +315,6 @@ public class SearchServiceImpl implements SearchService {
             BoolQueryBuilder timestampSearchQuery = QueryBuilders.boolQuery();
             timestampSearchQuery.must(fromTimestampMatchQuery);
             finalQuery.must(timestampSearchQuery);
-        }
-
-        if (searchRequest.getFilter().get("cc") != null) {
-            MatchQueryBuilder ccMatchQuery = QueryBuilders.matchQuery("assigned_to_id", searchRequest.getFilter().get("cc"));
-            BoolQueryBuilder ccSearchQuery = QueryBuilders.boolQuery();
-            ccSearchQuery.must(ccMatchQuery);
-            finalQuery.must(ccSearchQuery);
-        }
-        if (searchRequest.getFilter().get("status") != null ) {
-            List list = (List) searchRequest.getFilter().get("status");
-            if(list.size()>1) {
-                MatchQueryBuilder statusMatchQuery = null;
-                BoolQueryBuilder statusSearchQuery = QueryBuilders.boolQuery();
-                for(int i=0;i<list.size();i++){
-                    statusMatchQuery = QueryBuilders.matchQuery("status", list.get(i));
-                    statusSearchQuery.should(statusMatchQuery);
-                }
-                finalQuery.must(statusSearchQuery);
-            }
-        }
-        if (searchRequest.getIsJunk() != null) {
-            MatchQueryBuilder junkMatchQuery = QueryBuilders.matchQuery("is_junk", searchRequest.getIsJunk());
-            BoolQueryBuilder junkSearchQuery = QueryBuilders.boolQuery();
-            junkSearchQuery.must(junkMatchQuery);
-            finalQuery.must(junkSearchQuery);
-        }
-        if (searchRequest.getPriority() != null) {
-            MatchQueryBuilder priorityMatchQuery = QueryBuilders.matchQuery("priority", searchRequest.getPriority());
-            BoolQueryBuilder prioritySearchQuery = QueryBuilders.boolQuery();
-            prioritySearchQuery.must(priorityMatchQuery);
-            finalQuery.must(prioritySearchQuery);
-        }
-        if (searchRequest.getIsEscalated() != null) {
-            MatchQueryBuilder esclatedMatchQuery = QueryBuilders.matchQuery("is_escalated", searchRequest.getIsEscalated());
-            BoolQueryBuilder esclatedSearchQuery = QueryBuilders.boolQuery();
-            esclatedSearchQuery.must(esclatedMatchQuery);
-            finalQuery.must(esclatedSearchQuery);
         }
         return finalQuery;
     }

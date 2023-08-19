@@ -1,5 +1,7 @@
 package org.upsmf.grievance.service.impl;
 
+
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
@@ -11,7 +13,10 @@ import org.upsmf.grievance.model.reponse.FeedbackResponse;
 import org.upsmf.grievance.repository.es.FeedbackRepository;
 import org.upsmf.grievance.service.FeedbackService;
 
+import java.util.regex.Pattern;
+
 @Service
+@Slf4j
 public class FeedbackServiceImpl implements FeedbackService {
 
     @Value("${es.default.page.size}")
@@ -22,7 +27,11 @@ public class FeedbackServiceImpl implements FeedbackService {
 
     @Override
     public void saveFeedback(FeedbackDto feedbackDto) {
-        // TODO validate request -- all fields are mandatory except comment
+
+        try{
+
+        // validate request -- all fields are mandatory except comment
+            validateFeedbackDto(feedbackDto);
         Feedback feedback = Feedback.builder()
                 .firstName(feedbackDto.getFirstName())
                 .lastName(feedbackDto.getLastName())
@@ -30,7 +39,13 @@ public class FeedbackServiceImpl implements FeedbackService {
                 .phone(feedbackDto.getPhone())
                 .rating(feedbackDto.getRating())
                 .comment(feedbackDto.getComment()!=null?feedbackDto.getComment():"").build();
+
+        log.info("Saving feedback: {}", feedback);
         feedbackRepository.save(feedback);
+        log.info("Feedback saved successfully");
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     @Override
@@ -38,4 +53,45 @@ public class FeedbackServiceImpl implements FeedbackService {
         Page<Feedback> page = feedbackRepository.findAll(Pageable.ofSize(defaultPageSize));
         return FeedbackResponse.builder().count(page.getNumberOfElements()).data(page.getContent()).build();
     }
+
+    private void validateFeedbackDto(FeedbackDto feedbackDto) {
+        if (feedbackDto.getRating() == null || feedbackDto.getRating() < 1 || feedbackDto.getRating() > 5) {
+            throw new IllegalArgumentException("Rating must be between 1 and 5");
+        }
+
+        if (!isValidPhoneNumber(feedbackDto.getPhone())) {
+            throw new IllegalArgumentException("Invalid phone number");
+        }
+
+        if (!isValidEmail(feedbackDto.getEmail())) {
+            throw new IllegalArgumentException("Invalid email format");
+        }
+
+        if (!isValidName(feedbackDto.getFirstName())) {
+            throw new IllegalArgumentException("Invalid first name");
+        }
+
+        if (!isValidName(feedbackDto.getLastName())) {
+            throw new IllegalArgumentException("Invalid last name");
+        }
+    }
+
+    private boolean isValidPhoneNumber(String phoneNumber) {
+        // Validate phone number format using a regular expression
+        String phonePattern = "\\d{10}";
+        return Pattern.matches(phonePattern, phoneNumber);
+    }
+
+    private boolean isValidEmail(String email) {
+        // Validate email format using a regular expression
+        String emailPattern = "^[A-Za-z0-9+_.-]+@(.+)$";
+        return Pattern.matches(emailPattern, email);
+    }
+
+    private boolean isValidName(String name) {
+        // Validate name format using a regular expression
+        String namePattern = "[A-Za-z]+";
+        return Pattern.matches(namePattern, name);
+    }
+
 }

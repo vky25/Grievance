@@ -34,13 +34,17 @@ public class UserController {
     public ResponseEntity<User> createUser(@RequestBody UserDto userRequest) throws Exception{
             return integrationService.createUser(userRequest);
         }
+    @PostMapping("/user")
+    public User addUser(@RequestBody User userRequest) throws Exception{
+        return integrationService.addUser(userRequest);
+    }
     @PutMapping("/update-user")
     public ResponseEntity<String> updateUser(@RequestBody UserDto userDto) throws Exception{
             integrationService.updateUser(userDto);
             return ResponseEntity.ok("user updated successfully");
     }
 
-    @PostMapping("/users")
+    @GetMapping("/users")
     public ResponseEntity<String> getUsers(@RequestBody JsonNode payload) throws JsonProcessingException{
         return integrationService.getUsers(payload);
     }
@@ -53,6 +57,11 @@ public class UserController {
     @PostMapping("/deactivate")
     public ResponseEntity<User> deactivateUser(@RequestBody JsonNode payload)throws Exception {
         return  integrationService.deactivateUser(payload);
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<String> loginUser(@RequestBody JsonNode body){
+        return integrationService.login(body);
     }
 
 }

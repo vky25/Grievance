@@ -38,6 +38,14 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Value("${api.user.deactivateUserUrl}")
     private String deactivateUserUrl;
+    @Value("${api.user.loginUserUrl}")
+    private String loginUserUrl;
+
+    @Override
+    public User addUser(User user) {
+        return userRepository.save(user);
+    }
+
     @Override
     public ResponseEntity<User> createUser(UserDto user) throws Exception {
 
@@ -87,8 +95,8 @@ public class IntegrationServiceImpl implements IntegrationService {
         }else{
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
-
     }
+
 
     @Override
     public ResponseEntity<String> updateUser(UserDto userDto) throws Exception {
@@ -97,7 +105,7 @@ public class IntegrationServiceImpl implements IntegrationService {
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.createObjectNode();
         JsonNode request= mapper.createObjectNode();
-        ((ObjectNode) request).put("userId",userDto.getUserId());
+        //((ObjectNode) request).put("userId",userDto.getUserId());
         ((ObjectNode) request).put("password",userDto.getPassword());
         ((ObjectNode) root).put("request", request);
         //ToDo need to create dynamicaly create body
@@ -134,7 +142,9 @@ public class IntegrationServiceImpl implements IntegrationService {
         return User.builder()
                 .keycloakId(userContent.path("userId").asText())
                 .firstName(userContent.path("firstName").asText())
+                .lastname(userContent.path("lastname").asText())
                 .username(userContent.path("userName").asText())
+                .phoneNumber(userContent.path("phoneNumber").asText())
                 .email(userContent.path("email").asText())
                 .emailVerified(userContent.path("emailVerified").asBoolean())
                 .status(userContent.path("status").asInt())
@@ -203,6 +213,15 @@ public class IntegrationServiceImpl implements IntegrationService {
             // Handle error cases here
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    @Override
+    public ResponseEntity<String> login(JsonNode body) {
+        ResponseEntity<String> response = restTemplate.exchange(
+                loginUserUrl, HttpMethod.POST,
+                new HttpEntity<>(body), String.class
+        );
+        return response;
     }
 
 
