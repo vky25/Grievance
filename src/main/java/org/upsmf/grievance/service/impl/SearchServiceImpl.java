@@ -88,31 +88,33 @@ public class SearchServiceImpl implements SearchService {
         allDepartment = false;
         totalFinalResponse = false;
         multiSelectResponse = false;
-        List<Integer> ccList = (List<Integer>) searchRequest.getFilter().get("ccList");
-        if (ccList != null && ccList.size() > 0) {
-            for (int i = 1; i <= ccList.size(); i++) {
-                if (ccList.size() == i) {
-                    multiSelectResponse = true;
-                }
-                Long cc = Long.valueOf(ccList.get(i - 1));
-                if (cc != null && cc.equals(Constants.AFFILIATION)) {
-                    getfinalResponse(searchRequest, Constants.AFFILIATION);
-                } else if (cc != null && cc.equals(Constants.EXAM)) {
-                    getfinalResponse(searchRequest, Constants.EXAM);
-                } else if (cc != null && cc.equals(Constants.ADMISSION)) {
-                    getfinalResponse(searchRequest, Constants.ADMISSION);
-                } else if (cc != null && cc.equals(Constants.REGISTRATION)) {
-                    getfinalResponse(searchRequest, Constants.REGISTRATION);
-                } else if (cc != null && cc.equals(Constants.ASSESSMENT)) {
-                    getfinalResponse(searchRequest, Constants.ASSESSMENT);
-                } else {
-                    allDepartment = true;
-                    getfinalResponse(searchRequest, Constants.AFFILIATION);
-                    getfinalResponse(searchRequest, Constants.EXAM);
-                    getfinalResponse(searchRequest, Constants.ADMISSION);
-                    getfinalResponse(searchRequest, Constants.REGISTRATION);
-                    totalFinalResponse = true;// This flag should be there before last getfinalResponse
-                    getfinalResponse(searchRequest, Constants.ASSESSMENT);
+        if (searchRequest.getFilter() != null) {
+            List<Integer> ccList = (List<Integer>) searchRequest.getFilter().get("ccList");
+            if (ccList != null && ccList.size() > 0) {
+                for (int i = 1; i <= ccList.size(); i++) {
+                    if (ccList.size() == i) {
+                        multiSelectResponse = true;
+                    }
+                    Long cc = Long.valueOf(ccList.get(i - 1));
+                    if (cc != null && cc.equals(Constants.AFFILIATION)) {
+                        getfinalResponse(searchRequest, Constants.AFFILIATION);
+                    } else if (cc != null && cc.equals(Constants.EXAM)) {
+                        getfinalResponse(searchRequest, Constants.EXAM);
+                    } else if (cc != null && cc.equals(Constants.ADMISSION)) {
+                        getfinalResponse(searchRequest, Constants.ADMISSION);
+                    } else if (cc != null && cc.equals(Constants.REGISTRATION)) {
+                        getfinalResponse(searchRequest, Constants.REGISTRATION);
+                    } else if (cc != null && cc.equals(Constants.ASSESSMENT)) {
+                        getfinalResponse(searchRequest, Constants.ASSESSMENT);
+                    } else {
+                        allDepartment = true;
+                        getfinalResponse(searchRequest, Constants.AFFILIATION);
+                        getfinalResponse(searchRequest, Constants.EXAM);
+                        getfinalResponse(searchRequest, Constants.ADMISSION);
+                        getfinalResponse(searchRequest, Constants.REGISTRATION);
+                        totalFinalResponse = true;// This flag should be there before last getfinalResponse
+                        getfinalResponse(searchRequest, Constants.ASSESSMENT);
+                    }
                 }
             }
         } else {
@@ -189,9 +191,15 @@ public class SearchServiceImpl implements SearchService {
         finalResponse.put(Constants.ASSESSMENT_MATRIX, response);
 
         performanceIndicatorsResponse = new HashMap<>();
-        performanceIndicatorsResponse.put(Constants.TURN_AROUND_TIME, 0 +" days");
-        performanceIndicatorsResponse.put(Constants.ESCLATION_PERCENTAGE, (int) Math.round((double) (totalIsEscalated / totalTicketsCount) * 100) + "%");
-        performanceIndicatorsResponse.put(Constants.NUDGE_TICKET_PERCENTAGE, (int) Math.round((double) (totalNudgeTickets) / totalTicketsCount * 100) + "%");
+        performanceIndicatorsResponse.put(Constants.TURN_AROUND_TIME, 0 + " days");
+        int esclationPercentage = 0;
+        int nudgePercentage = 0;
+        if(totalTicketsCount != 0){
+            esclationPercentage = (int) Math.round((double) (totalIsEscalated / totalTicketsCount) * 100);
+            nudgePercentage = (int) Math.round((double) (totalNudgeTickets) / totalTicketsCount * 100);
+        }
+        performanceIndicatorsResponse.put(Constants.ESCLATION_PERCENTAGE, esclationPercentage + "%");
+        performanceIndicatorsResponse.put(Constants.NUDGE_TICKET_PERCENTAGE, nudgePercentage + "%");
         performanceIndicatorsResponse.put(Constants.OPEN_TICKET_GTE21, totalOpenTicketGte21);
         finalResponse.put(Constants.PERFORMANCE_INDICATORS, performanceIndicatorsResponse);
     }
