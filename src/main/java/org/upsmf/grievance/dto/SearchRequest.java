@@ -22,6 +22,8 @@ public class SearchRequest {
 
     private Long cc;
 
+    private List<Integer> ccList;
+
     private SearchDateRange date;
 
     private Boolean isJunk;
