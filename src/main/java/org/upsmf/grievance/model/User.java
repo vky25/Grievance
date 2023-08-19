@@ -20,14 +20,29 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    private String keycloakId;
+
+    private String firstName;
+
+    private String lastname;
+
     @Column(nullable=false)
     private String username;
 
     @Column(nullable=false, unique=true)
     private String email;
 
-    @Column(nullable=false)
-    private String password;
+    private boolean emailVerified;
+
+    private int status;
+
+    private String phoneNumber;
+
+    private String[] roles;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
+    private Department department;
+
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(
@@ -35,5 +50,6 @@ public class User {
             joinColumns = @JoinColumn(name = "user_id"),
             inverseJoinColumns = @JoinColumn(name = "role_id")
     )
-    private Set<Role> roles = new HashSet<>();
+   private Set<Role> rolesList = new HashSet<>();
+
 }
