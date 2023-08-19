@@ -9,6 +9,7 @@ import org.upsmf.grievance.model.User;
 
 public interface IntegrationService {
 
+    User addUser(User user);
     ResponseEntity<User> createUser(UserDto user) throws Exception;
 
     ResponseEntity<String> updateUser(UserDto userDto) throws Exception;
@@ -19,4 +20,6 @@ public interface IntegrationService {
     ResponseEntity<User> activateUser(JsonNode payload) throws Exception;
 
     ResponseEntity<User> deactivateUser(JsonNode payload) throws Exception;
+
+    ResponseEntity<String> login(JsonNode body);
 }
