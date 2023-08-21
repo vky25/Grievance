@@ -15,7 +15,7 @@ import org.springframework.data.elasticsearch.annotations.Field;
 public class Feedback {
 
     @Id
-    private Long id;
+    private String id;
 
     @Field(name = "first_name")
     private String firstName;

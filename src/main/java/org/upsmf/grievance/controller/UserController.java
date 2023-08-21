@@ -32,39 +32,67 @@ public class UserController {
     }
 
     @PostMapping("/create-user")
-    public ResponseEntity<User> createUser(@RequestBody CreateUserDto userRequest) throws Exception{
+    public ResponseEntity<User> createUser(@RequestBody CreateUserDto userRequest) {
+        try {
             return integrationService.createUser(userRequest);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
         }
+    }
 
     @PostMapping("/user")
-    public User addUser(@RequestBody User userRequest) throws Exception{
-        return integrationService.addUser(userRequest);
+    public User addUser(@RequestBody User userRequest) {
+        try {
+            return integrationService.addUser(userRequest);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     @PutMapping("/update-user")
-    public ResponseEntity<String> updateUser(@RequestBody UserDto userDto) throws Exception{
+    public ResponseEntity<String> updateUser(@RequestBody UserDto userDto) {
+        try {
             integrationService.updateUser(userDto);
-            return ResponseEntity.ok("user updated successfully");
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
+        return ResponseEntity.ok("user updated successfully");
     }
 
     @GetMapping("/users")
-    public ResponseEntity<String> getUsers(@RequestBody JsonNode payload) throws JsonProcessingException{
-        return integrationService.getUsers(payload);
+    public ResponseEntity<String> getUsers(@RequestBody JsonNode payload) {
+        try {
+            return integrationService.getUsers(payload);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     @PostMapping("/activate")
-    public ResponseEntity<User> activateUser(@RequestBody JsonNode payload)throws Exception {
-        return  integrationService.activateUser(payload);
+    public ResponseEntity<User> activateUser(@RequestBody JsonNode payload) {
+        try {
+            return integrationService.activateUser(payload);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     @PostMapping("/deactivate")
-    public ResponseEntity<User> deactivateUser(@RequestBody JsonNode payload)throws Exception {
-        return  integrationService.deactivateUser(payload);
+    public ResponseEntity<User> deactivateUser(@RequestBody JsonNode payload) {
+        try {
+            return integrationService.deactivateUser(payload);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<String> loginUser(@RequestBody JsonNode body){
-        return integrationService.login(body);
+    public ResponseEntity<String> loginUser(@RequestBody JsonNode body) {
+        try {
+            return integrationService.login(body);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
     }
 
 }

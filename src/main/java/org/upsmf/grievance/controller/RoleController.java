@@ -5,6 +5,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.upsmf.grievance.model.Role;
+import org.upsmf.grievance.model.reponse.Response;
 import org.upsmf.grievance.service.RoleService;
 
 import javax.management.relation.RoleNotFoundException;
@@ -19,14 +20,24 @@ public class RoleController {
 
     @PostMapping("/addrole")
     public ResponseEntity<Role> createRole(@RequestParam String roleName) {
-        Role createdRole = roleService.createRole(roleName);
-        return ResponseEntity.status(HttpStatus.CREATED).body(createdRole);
+        Role createdRole = null;
+        try {
+            createdRole = roleService.createRole(roleName);
+            return ResponseEntity.status(HttpStatus.CREATED).body(createdRole);
+        }catch (Exception e){
+            return new ResponseEntity(new Response(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @PutMapping("/{roleId}")
     public ResponseEntity<Role> updateRole(@PathVariable Long roleId, @RequestParam String newRoleName) throws RoleNotFoundException {
-        Role updatedRole = roleService.updateRole(roleId, newRoleName);
-        return ResponseEntity.ok(updatedRole);
+        Role updatedRole = null;
+        try {
+            updatedRole = roleService.updateRole(roleId, newRoleName);
+            return ResponseEntity.ok(updatedRole);
+        }catch (Exception e){
+            return new ResponseEntity(new Response(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping

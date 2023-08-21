@@ -25,8 +25,12 @@ public class FeedbackController {
 
     @PostMapping("/save")
     public ResponseEntity saveFeedback(@Valid  @RequestBody FeedbackDto feedbackDto) {
-        feedbackService.saveFeedback(feedbackDto);
-        return new ResponseEntity(HttpStatus.OK);
+        try {
+            feedbackService.saveFeedback(feedbackDto);
+            return new ResponseEntity(new Response(HttpStatus.OK.value(), null), HttpStatus.OK);
+        }catch (Exception e){
+            return new ResponseEntity(new Response(HttpStatus.INTERNAL_SERVER_ERROR.value(), e.getMessage()), HttpStatus.INTERNAL_SERVER_ERROR);
+        }
     }
 
     @GetMapping("/all")
