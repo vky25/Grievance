@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.gax.rpc.NotFoundException;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -12,12 +13,16 @@ import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.upsmf.grievance.dto.CreateUserDto;
+import org.upsmf.grievance.dto.UserCredentials;
 import org.upsmf.grievance.dto.UserDto;
+import org.upsmf.grievance.exception.runtime.InvalidRequestException;
 import org.upsmf.grievance.model.User;
 import org.upsmf.grievance.repository.UserRepository;
 import org.upsmf.grievance.service.IntegrationService;
 
 @Service
+@Slf4j
 public class IntegrationServiceImpl implements IntegrationService {
 
     @Autowired
@@ -47,7 +52,7 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
     @Override
-    public ResponseEntity<User> createUser(UserDto user) throws Exception {
+    public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
 
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -55,10 +60,10 @@ public class IntegrationServiceImpl implements IntegrationService {
         JsonNode jsonNodeObject = mapper.convertValue(user, JsonNode.class);
         JsonNode root = mapper.createObjectNode();
         ((ObjectNode) root).put("request", jsonNodeObject);
-        System.out.println(root);
+        log.info("Create user Request - {}", root);
         ResponseEntity response = restTemplate.exchange(createUserUrl, HttpMethod.POST,
                 new HttpEntity<>(root, headers), String.class);
-        System.out.println(response);
+        log.info("Create user Response - {}", response);
         if (response.getStatusCode() == HttpStatus.OK) {
 
             JsonNode apiResponse = mapper.readTree(response.getBody().toString());
@@ -222,6 +227,36 @@ public class IntegrationServiceImpl implements IntegrationService {
                 new HttpEntity<>(body), String.class
         );
         return response;
+    }
+
+
+    /**
+     *  API to change password
+     *  sample body -
+     *  {
+     *     "credentials": [
+     *       {
+     *         "type": "password",
+     *         "value": "ka09eF$299",
+     *         "temporary": "false"
+     *       }
+     *     ]
+     *     }
+     * }
+     * @param userCredentials
+     */
+    public void changePassword(UserCredentials userCredentials) {
+        // validate Request
+        validateChangePasswordRequest(userCredentials);
+        ObjectMapper mapper = new ObjectMapper();
+
+    }
+
+    private void validateChangePasswordRequest(UserCredentials userCredentials) {
+        if(userCredentials == null) {
+            throw new InvalidRequestException("Invalid Request");
+        }
+
     }
 
 

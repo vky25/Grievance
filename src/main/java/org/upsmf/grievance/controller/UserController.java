@@ -6,6 +6,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.upsmf.grievance.dto.CreateUserDto;
 import org.upsmf.grievance.dto.UserDto;
 import org.upsmf.grievance.model.User;
 import org.upsmf.grievance.service.IntegrationService;
@@ -31,13 +32,15 @@ public class UserController {
     }
 
     @PostMapping("/create-user")
-    public ResponseEntity<User> createUser(@RequestBody UserDto userRequest) throws Exception{
+    public ResponseEntity<User> createUser(@RequestBody CreateUserDto userRequest) throws Exception{
             return integrationService.createUser(userRequest);
         }
+
     @PostMapping("/user")
     public User addUser(@RequestBody User userRequest) throws Exception{
         return integrationService.addUser(userRequest);
     }
+
     @PutMapping("/update-user")
     public ResponseEntity<String> updateUser(@RequestBody UserDto userDto) throws Exception{
             integrationService.updateUser(userDto);
