@@ -28,10 +28,10 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Override
     public void saveFeedback(FeedbackDto feedbackDto) {
 
+        // validate request -- all fields are mandatory except comment
+        validateFeedbackDto(feedbackDto);
         try{
 
-        // validate request -- all fields are mandatory except comment
-            validateFeedbackDto(feedbackDto);
         Feedback feedback = Feedback.builder()
                 .firstName(feedbackDto.getFirstName())
                 .lastName(feedbackDto.getLastName())

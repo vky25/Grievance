@@ -30,14 +30,24 @@ public class SearchTicketController {
 
     @PostMapping("/searchTickets")
     public ResponseEntity<Response> searchTickets(@RequestBody SearchRequest searchRequest) {
-        Map<String, Object> responseTicket = searchService.searchTickets(searchRequest);
+        Map<String, Object> responseTicket = null;
+        try {
+            responseTicket = searchService.searchTickets(searchRequest);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }
 
     @PostMapping("/dashboardReport")
     public ResponseEntity<Response> getDashboardReport(@RequestBody SearchRequest searchRequest) {
-        Map<String, Object> responseTicket = searchService.dashboardReport(searchRequest);
+        Map<String, Object> responseTicket = null;
+        try {
+            responseTicket = searchService.dashboardReport(searchRequest);
+        } catch (Exception e) {
+            throw new RuntimeException(e.getMessage());
+        }
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
         return new ResponseEntity<>(response, HttpStatus.OK);
     }

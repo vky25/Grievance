@@ -29,7 +29,7 @@ public class TicketController {
         try {
             responseTicket = ticketService.save(ticketRequest);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(e.getMessage());
         }
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
         return new ResponseEntity<Response>(response, HttpStatus.OK);
@@ -41,7 +41,7 @@ public class TicketController {
         try {
             responseTicket = ticketService.update(updateTicketRequest);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(e.getMessage());
         }
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
         return new ResponseEntity<Response>(response, HttpStatus.OK);
@@ -60,7 +60,7 @@ public class TicketController {
         try {
             attachmentService.uploadObject(fileUploadRequest);
         } catch (Exception e) {
-            throw new RuntimeException(e);
+            throw new RuntimeException(e.getMessage());
         }
         return new ResponseEntity(HttpStatus.OK);
     }
