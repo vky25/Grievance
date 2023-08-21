@@ -25,6 +25,7 @@ import org.upsmf.grievance.util.DateUtil;
 import javax.transaction.Transactional;
 import java.sql.Timestamp;
 import java.time.format.DateTimeFormatter;
+import java.util.Calendar;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -154,7 +155,7 @@ public class TicketServiceImpl implements TicketService {
      */
     @Override
     @Transactional
-    public Ticket update(UpdateTicketRequest updateTicketRequest) {
+    public Ticket update(UpdateTicketRequest updateTicketRequest) throws Exception {
         //  validate ticket
         validateUpdateTicketRequest(updateTicketRequest);
         // check if the ticket exists
@@ -204,7 +205,7 @@ public class TicketServiceImpl implements TicketService {
      * @param updateTicketRequest
      * @param ticket
      */
-    private void setUpdateTicket(UpdateTicketRequest updateTicketRequest, Ticket ticket) {
+    private void setUpdateTicket(UpdateTicketRequest updateTicketRequest, Ticket ticket) throws Exception {
         // TODO check request role and permission
         if(updateTicketRequest.getStatus()!=null)
             ticket.setStatus(updateTicketRequest.getStatus());
@@ -214,6 +215,7 @@ public class TicketServiceImpl implements TicketService {
             ticket.setPriority(updateTicketRequest.getPriority());
         if(updateTicketRequest.getIsJunk()!=null)
             ticket.setJunk(updateTicketRequest.getIsJunk());
+        ticket.setUpdatedDate(new Timestamp(DateUtil.getCurrentDate().getTime()));
         // update assignee comments
         if(updateTicketRequest.getComment()!=null) {
             Comments comments = Comments.builder().comment(updateTicketRequest.getComment())

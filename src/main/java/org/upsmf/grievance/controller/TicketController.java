@@ -37,7 +37,12 @@ public class TicketController {
 
     @PostMapping("/update")
     public ResponseEntity<Response> update(@RequestBody UpdateTicketRequest updateTicketRequest) {
-        Ticket responseTicket = ticketService.update(updateTicketRequest);
+        Ticket responseTicket = null;
+        try {
+            responseTicket = ticketService.update(updateTicketRequest);
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
         return new ResponseEntity<Response>(response, HttpStatus.OK);
     }
