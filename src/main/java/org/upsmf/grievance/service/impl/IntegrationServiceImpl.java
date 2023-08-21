@@ -86,7 +86,7 @@ public class IntegrationServiceImpl implements IntegrationService {
                 String getUsersResponseBody = getUsersResponse.getBody();
                 JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
 
-                JsonNode userContentData = getUsersJsonNode.path("result").path("response").path("content").get(0);
+                JsonNode userContentData = getUsersJsonNode.get(0);
 
                 User newUser = createUserWithApiResponse(userContentData);
                 User savedUser = userRepository.save(newUser);
