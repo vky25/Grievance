@@ -116,6 +116,14 @@ public class SearchServiceImpl implements SearchService {
                         getfinalResponse(searchRequest, Constants.ASSESSMENT);
                     }
                 }
+            } else {
+                allDepartment = true;
+                getfinalResponse(searchRequest, Constants.AFFILIATION);
+                getfinalResponse(searchRequest, Constants.EXAM);
+                getfinalResponse(searchRequest, Constants.ADMISSION);
+                getfinalResponse(searchRequest, Constants.REGISTRATION);
+                totalFinalResponse = true;// This flag should be there before last getfinalResponse
+                getfinalResponse(searchRequest, Constants.ASSESSMENT);
             }
         } else {
             allDepartment = true;
