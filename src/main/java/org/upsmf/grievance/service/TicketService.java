@@ -10,7 +10,7 @@ public interface TicketService {
 
     Ticket save(TicketRequest ticketRequest) throws Exception;
 
-    Ticket update(UpdateTicketRequest updateTicketRequest);
+    Ticket update(UpdateTicketRequest updateTicketRequest) throws Exception;
 
     Ticket getTicketById(long id);
 }
