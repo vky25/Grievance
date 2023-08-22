@@ -488,9 +488,13 @@ public class SearchServiceImpl implements SearchService {
             finalQuery.must(keywordSearchQuery);
         }
         getPriority(String.valueOf(searchRequest.getPriority()), finalQuery);
-        getCCRangeQuery(((Number) searchRequest.getFilter().get("cc")).longValue(), finalQuery);
+        if(searchRequest.getFilter().get("cc") != null) {
+            getCCRangeQuery(((Number) searchRequest.getFilter().get("cc")).longValue(), finalQuery);
+        }
         getDateRangeQuery(searchRequest, finalQuery);
-        getStatusQuery((List<String>) searchRequest.getFilter().get("status"), finalQuery);
+        if(searchRequest.getFilter().get("status") != null) {
+            getStatusQuery((List<String>) searchRequest.getFilter().get("status"), finalQuery);
+        }
         getJunkQuery(searchRequest.getIsJunk(), finalQuery);
         getEsclatedTicketsQuery(searchRequest.getIsEscalated(), finalQuery);
         return finalQuery;
