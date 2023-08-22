@@ -501,7 +501,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private BoolQueryBuilder getPriority(String priority, BoolQueryBuilder finalQuery) {
-        if (priority != null) {
+        if (!priority.isBlank() && !priority.equalsIgnoreCase("null")) {
             MatchQueryBuilder priorityMatchQuery = QueryBuilders.matchQuery("priority", priority);
             BoolQueryBuilder prioritySearchQuery = QueryBuilders.boolQuery();
             prioritySearchQuery.must(priorityMatchQuery);
