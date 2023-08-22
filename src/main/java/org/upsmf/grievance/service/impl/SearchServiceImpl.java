@@ -487,7 +487,9 @@ public class SearchServiceImpl implements SearchService {
             keywordSearchQuery.should(firstNameKeywordMatchQuery).should(phoneKeywordMatchQuery).should(emailKeywordMatchQuery);
             finalQuery.must(keywordSearchQuery);
         }
-        getPriority(String.valueOf(searchRequest.getPriority()), finalQuery);
+        if(searchRequest.getPriority() != null) {
+            getPriority(String.valueOf(searchRequest.getPriority()), finalQuery);
+        }
         if(searchRequest.getFilter().get("cc") != null) {
             getCCRangeQuery(((Number) searchRequest.getFilter().get("cc")).longValue(), finalQuery);
         }
@@ -501,7 +503,7 @@ public class SearchServiceImpl implements SearchService {
     }
 
     private BoolQueryBuilder getPriority(String priority, BoolQueryBuilder finalQuery) {
-        if (priority != null) {
+        if (priority !=null && !priority.isBlank()) {
             MatchQueryBuilder priorityMatchQuery = QueryBuilders.matchQuery("priority", priority);
             BoolQueryBuilder prioritySearchQuery = QueryBuilders.boolQuery();
             prioritySearchQuery.must(priorityMatchQuery);
