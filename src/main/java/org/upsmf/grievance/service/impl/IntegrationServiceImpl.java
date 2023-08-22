@@ -16,10 +16,19 @@ import org.springframework.web.server.ResponseStatusException;
 import org.upsmf.grievance.dto.CreateUserDto;
 import org.upsmf.grievance.dto.UserCredentials;
 import org.upsmf.grievance.dto.UserDto;
+import org.upsmf.grievance.enums.Department;
 import org.upsmf.grievance.exception.runtime.InvalidRequestException;
+import org.upsmf.grievance.model.Role;
 import org.upsmf.grievance.model.User;
+import org.upsmf.grievance.model.UserRole;
+import org.upsmf.grievance.repository.DepartmentRepository;
+import org.upsmf.grievance.repository.RoleRepository;
 import org.upsmf.grievance.repository.UserRepository;
+import org.upsmf.grievance.repository.UserRoleRepository;
 import org.upsmf.grievance.service.IntegrationService;
+
+import java.util.List;
+import java.util.Optional;
 
 @Service
 @Slf4j
@@ -46,6 +55,15 @@ public class IntegrationServiceImpl implements IntegrationService {
     @Value("${api.user.loginUserUrl}")
     private String loginUserUrl;
 
+    @Autowired
+    private UserRoleRepository userRoleRepository;
+
+    @Autowired
+    private RoleRepository roleRepository;
+
+    @Autowired
+    private DepartmentRepository departmentRepository;
+
     @Override
     public User addUser(User user) {
         return userRepository.save(user);
@@ -53,7 +71,12 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Override
     public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
-
+        // check for department
+        String departmentId = user.getAttributes().get("departmentName");
+        List<Department> departmentList = Department.getById(Integer.valueOf(departmentId));
+        if(departmentList != null && !departmentList.isEmpty()) {
+            user.getAttributes().put("departmentName", departmentList.get(0).name());
+        }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         ObjectMapper mapper = new ObjectMapper();
@@ -65,18 +88,11 @@ public class IntegrationServiceImpl implements IntegrationService {
                 new HttpEntity<>(root, headers), String.class);
         log.info("Create user Response - {}", response);
         if (response.getStatusCode() == HttpStatus.OK) {
+            String userContent = response.getBody().toString();
 
-            JsonNode apiResponse = mapper.readTree(response.getBody().toString());
-
-            String userContent = apiResponse.path("result").path("userId").asText();
-            ObjectNode filtersNode = mapper.createObjectNode();
-            filtersNode.put("userId", userContent);
 
             ObjectNode requestNode = mapper.createObjectNode();
-            requestNode.set("filters", filtersNode);
-            requestNode.put("offset", 0);
-            requestNode.put("limit", 10);
-            requestNode.set("fields", mapper.createArrayNode()); // Empty fields array
+            requestNode.put("userName", userContent);
             JsonNode payload = requestNode;
             JsonNode payloadRoot = mapper.createObjectNode();
             ((ObjectNode) payloadRoot).put("request", payload);
@@ -86,12 +102,20 @@ public class IntegrationServiceImpl implements IntegrationService {
                 String getUsersResponseBody = getUsersResponse.getBody();
                 JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
 
-                JsonNode userContentData = getUsersJsonNode.get(0);
-
-                User newUser = createUserWithApiResponse(userContentData);
-                User savedUser = userRepository.save(newUser);
-
-                return new ResponseEntity<>(savedUser, HttpStatus.OK);
+                if(getUsersJsonNode.size() > 0) {
+                    JsonNode userContentData = getUsersJsonNode;
+                    User newUser = createUserWithApiResponse(userContentData);
+                    User savedUser = userRepository.save(newUser);
+                    // create user role mapping
+                    createUserRoleMapping(user, savedUser);
+                    // create user department mapping
+                    if(savedUser != null && savedUser.getId() > 0 && departmentList != null && !departmentList.isEmpty()) {
+                        org.upsmf.grievance.model.Department departmentMap = org.upsmf.grievance.model.Department.builder().departmentName(departmentList.get(0).name()).userId(savedUser.getId()).build();
+                        departmentRepository.save(departmentMap);
+                    }
+                    return new ResponseEntity<>(savedUser, HttpStatus.OK);
+                }
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
             else {
                 // Handle error cases here
@@ -99,6 +123,19 @@ public class IntegrationServiceImpl implements IntegrationService {
             }
         }else{
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void createUserRoleMapping(CreateUserDto user, User savedUser) {
+        if(savedUser != null && savedUser.getId() > 0) {
+            String role = user.getAttributes().get("role");
+            if(role != null && !role.isBlank()) {
+                Role roleDetails = roleRepository.findByName(role);
+                if(roleDetails != null) {
+                    UserRole userRole = UserRole.builder().userId(savedUser.getId()).roleId(roleDetails.getId()).build();
+                    userRoleRepository.save(userRole);
+                }
+            }
         }
     }
 
@@ -113,7 +150,7 @@ public class IntegrationServiceImpl implements IntegrationService {
         //((ObjectNode) request).put("userId",userDto.getUserId());
         ((ObjectNode) request).put("password",userDto.getPassword());
         ((ObjectNode) root).put("request", request);
-        //ToDo need to create dynamicaly create body
+        //TODO need to create dynamically create body
             ResponseEntity<String> response = restTemplate.exchange(
                     updateUserUrl, HttpMethod.PUT,
                     new HttpEntity<>(root, headers), String.class
@@ -137,7 +174,7 @@ public class IntegrationServiceImpl implements IntegrationService {
     private User createUserWithApiResponse(JsonNode userContent)throws Exception{
         String[] rolesArray = new String[0];
 
-        JsonNode rolesNode = userContent.path("roles");
+        JsonNode rolesNode = userContent.path("attributes").path("role");
         if (rolesNode.isArray()) {
             rolesArray = new String[rolesNode.size()];
             for (int i = 0; i < rolesNode.size(); i++) {
@@ -145,14 +182,14 @@ public class IntegrationServiceImpl implements IntegrationService {
             }
         }
         return User.builder()
-                .keycloakId(userContent.path("userId").asText())
+                .keycloakId(userContent.path("id").asText())
                 .firstName(userContent.path("firstName").asText())
-                .lastname(userContent.path("lastname").asText())
-                .username(userContent.path("userName").asText())
-                .phoneNumber(userContent.path("phoneNumber").asText())
+                .lastname(userContent.path("lastName").asText())
+                .username(userContent.path("username").asText())
+                .phoneNumber(userContent.path("attributes").path("phoneNumber").get(0).asText())
                 .email(userContent.path("email").asText())
                 .emailVerified(userContent.path("emailVerified").asBoolean())
-                .status(userContent.path("status").asInt())
+                .status(userContent.path("enabled").asInt())
                 .roles(rolesArray)
                 .build();
 
@@ -170,6 +207,16 @@ public class IntegrationServiceImpl implements IntegrationService {
 
         return response;
 
+    }
+
+    @Override
+    public ResponseEntity<User> getUserById(long id) throws RuntimeException {
+        Optional<User> user = userRepository.findById(id);
+        if(user.isPresent()) {
+            User userDetails = user.get();
+        return new ResponseEntity<>(userDetails, HttpStatus.OK);
+        }
+        throw new RuntimeException("User details not found.");
     }
 
     @Override

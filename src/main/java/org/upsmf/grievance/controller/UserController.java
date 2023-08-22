@@ -1,6 +1,5 @@
 package org.upsmf.grievance.controller;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
@@ -66,6 +65,11 @@ public class UserController {
         } catch (Exception e) {
             throw new RuntimeException(e.getMessage());
         }
+    }
+
+    @GetMapping("/info")
+    public ResponseEntity<User> getUsersById(@RequestParam("id") long id) throws RuntimeException{
+        return integrationService.getUserById(id);
     }
 
     @PostMapping("/activate")
