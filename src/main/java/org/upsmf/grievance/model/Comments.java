@@ -21,7 +21,7 @@ public class Comments {
     private Long ticketId;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private String userId;
 
     @Column(name = "comment", nullable = false)
     private String comment;

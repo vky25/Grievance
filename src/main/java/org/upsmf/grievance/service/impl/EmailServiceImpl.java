@@ -19,13 +19,13 @@ import org.upsmf.grievance.service.EmailService;
 // Annotation
 @Service
 @Slf4j
-// Class
-// Implementing EmailService interface
 public class EmailServiceImpl implements EmailService {
 
-    @Autowired private JavaMailSender javaMailSender;
+    @Autowired
+    private JavaMailSender javaMailSender;
 
-    @Value("${spring.mail.username}") private String sender;
+    @Value("${spring.mail.username}")
+    private String sender;
 
     // Method 1
     // To send a simple email

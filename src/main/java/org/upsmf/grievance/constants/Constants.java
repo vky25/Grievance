@@ -5,11 +5,6 @@ public class Constants {
     public static final String TIME_ZONE = "Asia/Kolkata";
     public static final Long PENDING_21_DAYS = 21l;
     public static final Long PENDING_15_DAYS = 15l;
-    public static final Long AFFILIATION = 1l;
-    public static final Long EXAM = 2l;
-    public static final Long ADMISSION = 3l;
-    public static final Long REGISTRATION = 4l;
-    public static final Long ASSESSMENT = 5l;
     public static final String TOTAL_TICKETS = "total";
     public static final String IS_OPEN = "isOpen";
     public static final String IS_CLOSED = "isClosed";

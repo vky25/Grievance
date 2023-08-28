@@ -18,10 +18,10 @@ public class TicketRequest {
     private String email;
     private String phone;
     private RequesterType userType;
-    private Long cc;
+    private String cc;
     private String requestType;
     private String description;
-    private List<String> attachmentURls;
+    private List<String> attachmentUrls;
     private String otp;
 
 }

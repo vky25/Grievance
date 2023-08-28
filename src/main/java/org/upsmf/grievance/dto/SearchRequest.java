@@ -20,9 +20,9 @@ public class SearchRequest {
 
     private List<String> status;
 
-    private Long cc;
+    private String cc;
 
-    private List<Integer> ccList;
+    private List<String> ccList;
 
     private SearchDateRange date;
 

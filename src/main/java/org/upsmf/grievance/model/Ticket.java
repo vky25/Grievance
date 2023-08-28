@@ -41,7 +41,7 @@ public class Ticket {
     private RequesterType requesterType;
 
     @Column(name = "assigned_to_id")
-    private Long assignedToId;
+    private String assignedToId;
 
     @Column(name = "description")
     private String description;
@@ -56,7 +56,7 @@ public class Ticket {
     private Timestamp updatedDate;
 
     @Column(name = "last_updated_by")
-    private Long lastUpdatedBy;
+    private String lastUpdatedBy;
 
     @Column(name = "is_escalated")
     private boolean escalated;
@@ -65,7 +65,7 @@ public class Ticket {
     private Timestamp escalatedDate;
 
     @Column(name = "escalated_to")
-    private Long escalatedTo;
+    private String escalatedTo;
 
     @Column(name = "status")
     private TicketStatus status = TicketStatus.OPEN;
@@ -78,7 +78,7 @@ public class Ticket {
 
     // if the ticket is escalated by system, value will be -1 else superAdmin ID
     @Column(name = "escalated_by")
-    private Long escalatedBy = -1L;
+    private String escalatedBy = "-1";
 
     @OneToMany(targetEntity = Comments.class, mappedBy = "ticketId", fetch = FetchType.EAGER)
     @Fetch(value = FetchMode.SUBSELECT)

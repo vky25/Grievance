@@ -112,7 +112,7 @@ public class TicketServiceImpl implements TicketService {
         // set default value for creating ticket
         Ticket ticket = createTicketWithDefault(ticketRequest);
         // create ticket
-        ticket = saveWithAttachment(ticket, ticketRequest.getAttachmentURls());
+        ticket = saveWithAttachment(ticket, ticketRequest.getAttachmentUrls());
         // TODO get email subject and body from db
         otpService.sendGenericEmail(ticketRequest.getEmail(), "Ticket Created", "You ticket is created with ID "+ticket.getId()+" at "+ticket.getCreatedDate());
         return ticket;
@@ -137,14 +137,14 @@ public class TicketServiceImpl implements TicketService {
                 .description(ticketRequest.getDescription())
                 .createdDate(currentTimestamp)
                 .updatedDate(currentTimestamp)
-                .lastUpdatedBy(-1l)
+                .lastUpdatedBy("-1")
                 .escalated(false)
                 .escalatedDate(null)
-                .escalatedTo(-1l)
+                .escalatedTo("-1")
                 .status(TicketStatus.OPEN)
                 .requestType(ticketRequest.getRequestType())
                 .priority(TicketPriority.LOW)
-                .escalatedBy(-1l)
+                .escalatedBy("-1")
                 .build();
     }
 
@@ -207,14 +207,19 @@ public class TicketServiceImpl implements TicketService {
      */
     private void setUpdateTicket(UpdateTicketRequest updateTicketRequest, Ticket ticket) throws Exception {
         // TODO check request role and permission
-        if(updateTicketRequest.getStatus()!=null)
+        if(updateTicketRequest.getStatus()!=null) {
             ticket.setStatus(updateTicketRequest.getStatus());
-        if(updateTicketRequest.getCc()!=null)
+        }
+
+        if(updateTicketRequest.getCc()!=null && !updateTicketRequest.getCc().isBlank()) {
             ticket.setAssignedToId(updateTicketRequest.getCc());
-        if(updateTicketRequest.getPriority()!=null)
+        }
+        if(updateTicketRequest.getPriority()!=null) {
             ticket.setPriority(updateTicketRequest.getPriority());
-        if(updateTicketRequest.getIsJunk()!=null)
+        }
+        if(updateTicketRequest.getIsJunk()!=null) {
             ticket.setJunk(updateTicketRequest.getIsJunk());
+        }
         ticket.setUpdatedDate(new Timestamp(DateUtil.getCurrentDate().getTime()));
         // update assignee comments
         if(updateTicketRequest.getComment()!=null) {
@@ -269,9 +274,6 @@ public class TicketServiceImpl implements TicketService {
                 .priority(ticket.getPriority())
                 .escalatedBy(ticket.getEscalatedBy())
                 .escalatedTo(ticket.getEscalatedTo()).build();
-                //.comments(ticket.getComments()!=null?ticket.getComments():Collections.EMPTY_LIST)
-                //.raiserAttachmentURLs(ticket.getRaiserTicketAttachmentURLs()!=null?mapper.writeValueAsString(ticket.getRaiserTicketAttachmentURLs()):"")
-                //.assigneeAttachmentURLs(ticket.getAssigneeTicketAttachment()!=null?mapper.writeValueAsString(ticket.getAssigneeTicketAttachment()):"").build();
     }
 
     /**
@@ -296,8 +298,8 @@ public class TicketServiceImpl implements TicketService {
         if(ticketRequest==null){
             throw new IllegalArgumentException("Ticket request cannot be null");
         }
-        if(StringUtils.isBlank(ticketRequest.getFirstName())||StringUtils.isBlank(ticketRequest.getLastName())){
-            throw new IllegalArgumentException("First name and last name are required");
+        if(StringUtils.isBlank(ticketRequest.getFirstName())){
+            throw new IllegalArgumentException("First name is required");
         }
 
         if (StringUtils.isBlank(ticketRequest.getEmail())) {
@@ -310,8 +312,8 @@ public class TicketServiceImpl implements TicketService {
         if (ticketRequest.getUserType() == null) {
             throw new IllegalArgumentException("User type is required");
         }
-        if (ticketRequest.getAttachmentURls() != null) {
-            for (String attachmentUrl : ticketRequest.getAttachmentURls()) {
+        if (ticketRequest.getAttachmentUrls() != null) {
+            for (String attachmentUrl : ticketRequest.getAttachmentUrls()) {
                 if (StringUtils.isBlank(attachmentUrl)) {
                     throw new IllegalArgumentException("Invalid attachment URL");
                 }
@@ -329,7 +331,7 @@ public class TicketServiceImpl implements TicketService {
     }
 
     private boolean isValidPriority(TicketPriority priority) {
-        return priority == TicketPriority.LOW || priority == TicketPriority.MEDIUM ||priority==TicketPriority.HIGH;
+        return priority == TicketPriority.LOW || priority == TicketPriority.MEDIUM || priority==TicketPriority.HIGH;
     }
 
     private void validateUpdateTicketRequest(UpdateTicketRequest request) {

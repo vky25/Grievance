@@ -43,6 +43,21 @@ public class SearchServiceImpl implements SearchService {
     @Value("${pending.15.days}")
     private long PENDING_15_DAYS;
 
+    @Value("${affiliation}")
+    private String AFFILIATION;
+
+    @Value("${exam}")
+    private String EXAM;
+
+    @Value("${admission}")
+    private String ADMISSION;
+
+    @Value("${registration}")
+    private String REGISTRATION;
+
+    @Value("${assessment}")
+    private String ASSESSMENT;
+
     private Map<String, Object> departmentNameResponse = new HashMap<>();
     private Map<String, Object> performanceIndicatorsResponse = new HashMap<>();
     private Map<String, Object> finalResponse = new HashMap<>();
@@ -89,61 +104,61 @@ public class SearchServiceImpl implements SearchService {
         totalFinalResponse = false;
         multiSelectResponse = false;
         if (searchRequest.getFilter() != null) {
-            List<Integer> ccList = (List<Integer>) searchRequest.getFilter().get("ccList");
+            List<String> ccList = (List<String>) searchRequest.getFilter().get("ccList");
             if (ccList != null && ccList.size() > 0) {
                 for (int i = 1; i <= ccList.size(); i++) {
                     if (ccList.size() == i) {
                         multiSelectResponse = true;
                     }
-                    Long cc = Long.valueOf(ccList.get(i - 1));
-                    if (cc != null && cc.equals(Constants.AFFILIATION)) {
-                        getfinalResponse(searchRequest, Constants.AFFILIATION);
-                    } else if (cc != null && cc.equals(Constants.EXAM)) {
-                        getfinalResponse(searchRequest, Constants.EXAM);
-                    } else if (cc != null && cc.equals(Constants.ADMISSION)) {
-                        getfinalResponse(searchRequest, Constants.ADMISSION);
-                    } else if (cc != null && cc.equals(Constants.REGISTRATION)) {
-                        getfinalResponse(searchRequest, Constants.REGISTRATION);
-                    } else if (cc != null && cc.equals(Constants.ASSESSMENT)) {
-                        getfinalResponse(searchRequest, Constants.ASSESSMENT);
+                    String cc = String.valueOf(ccList.get(i - 1));
+                    if (cc != null && cc.equals(AFFILIATION)) {
+                        getfinalResponse(searchRequest, AFFILIATION);
+                    } else if (cc != null && cc.equals(EXAM)) {
+                        getfinalResponse(searchRequest, EXAM);
+                    } else if (cc != null && cc.equals(ADMISSION)) {
+                        getfinalResponse(searchRequest, ADMISSION);
+                    } else if (cc != null && cc.equals(REGISTRATION)) {
+                        getfinalResponse(searchRequest, REGISTRATION);
+                    } else if (cc != null && cc.equals(ASSESSMENT)) {
+                        getfinalResponse(searchRequest, ASSESSMENT);
                     } else {
                         allDepartment = true;
-                        getfinalResponse(searchRequest, Constants.AFFILIATION);
-                        getfinalResponse(searchRequest, Constants.EXAM);
-                        getfinalResponse(searchRequest, Constants.ADMISSION);
-                        getfinalResponse(searchRequest, Constants.REGISTRATION);
+                        getfinalResponse(searchRequest, AFFILIATION);
+                        getfinalResponse(searchRequest, EXAM);
+                        getfinalResponse(searchRequest, ADMISSION);
+                        getfinalResponse(searchRequest, REGISTRATION);
                         totalFinalResponse = true;// This flag should be there before last getfinalResponse
-                        getfinalResponse(searchRequest, Constants.ASSESSMENT);
+                        getfinalResponse(searchRequest, ASSESSMENT);
                     }
                 }
             } else {
                 allDepartment = true;
-                getfinalResponse(searchRequest, Constants.AFFILIATION);
-                getfinalResponse(searchRequest, Constants.EXAM);
-                getfinalResponse(searchRequest, Constants.ADMISSION);
-                getfinalResponse(searchRequest, Constants.REGISTRATION);
+                getfinalResponse(searchRequest, AFFILIATION);
+                getfinalResponse(searchRequest, EXAM);
+                getfinalResponse(searchRequest, ADMISSION);
+                getfinalResponse(searchRequest, REGISTRATION);
                 totalFinalResponse = true;// This flag should be there before last getfinalResponse
-                getfinalResponse(searchRequest, Constants.ASSESSMENT);
+                getfinalResponse(searchRequest, ASSESSMENT);
             }
         } else {
             allDepartment = true;
-            getfinalResponse(searchRequest, Constants.AFFILIATION);
-            getfinalResponse(searchRequest, Constants.EXAM);
-            getfinalResponse(searchRequest, Constants.ADMISSION);
-            getfinalResponse(searchRequest, Constants.REGISTRATION);
+            getfinalResponse(searchRequest, AFFILIATION);
+            getfinalResponse(searchRequest, EXAM);
+            getfinalResponse(searchRequest, ADMISSION);
+            getfinalResponse(searchRequest, REGISTRATION);
             totalFinalResponse = true;// This flag should be there before last getfinalResponse
-            getfinalResponse(searchRequest, Constants.ASSESSMENT);
+            getfinalResponse(searchRequest, ASSESSMENT);
         }
         return finalResponse;
     }
 
-    private void getfinalResponse(SearchRequest searchRequest, Long cc) {
+    private void getfinalResponse(SearchRequest searchRequest, String cc) {
         SearchResponse searchJunkResponse = getDashboardSearchResponse(searchRequest, "isJunk", cc, null);
         SearchResponse searchOpenStatusResponse = getDashboardSearchResponse(searchRequest, "openStatus", cc, null);
         SearchResponse searchClosedStatusResponse = getDashboardSearchResponse(searchRequest, "closedStatus", cc, null);
         SearchResponse searchTurnAroundStatusResponse = getDashboardSearchResponse(searchRequest, "closedStatus", cc, null);
         SearchResponse searchIsEsclatedResponse = getDashboardSearchResponse(searchRequest, "isEscalated", cc, null);
-        SearchResponse searchUnassignedResponse = getDashboardSearchResponse(searchRequest, "openStatus", -1l, null);
+        SearchResponse searchUnassignedResponse = getDashboardSearchResponse(searchRequest, "openStatus", "-1", null);
         SearchResponse searchOpenTicketsGte21Response = getDashboardSearchResponse(searchRequest, "openStatus", cc, "isGte21");
         SearchResponse searchOpenTicketsGte15Response = getDashboardSearchResponse(searchRequest, "openStatus", cc, "isGte15");
         SearchResponse searchPriorityResponse = getDashboardSearchResponse(searchRequest, "highPriority", cc, null);
@@ -167,15 +182,15 @@ public class SearchServiceImpl implements SearchService {
         response.put(Constants.UNASSIGNED, searchUnassignedResponse.getHits().getTotalHits().value);
         response.put(Constants.OPEN_TICKET_GTE15, searchOpenTicketsGte15Response.getHits().getTotalHits().value);
 
-        if (cc.equals(Constants.ASSESSMENT)) {
+        if (cc.equals(ASSESSMENT)) {
             departmentNameResponse.put(Constants.ASSESSMENT_DEPARTMENT, response);
-        } else if (cc.equals(Constants.AFFILIATION)) {
+        } else if (cc.equals(AFFILIATION)) {
             departmentNameResponse.put(Constants.AFFILIATION_NAME, response);
-        } else if (cc.equals(Constants.EXAM)) {
+        } else if (cc.equals(EXAM)) {
             departmentNameResponse.put(Constants.EXAM_NAME, response);
-        } else if (cc.equals(Constants.REGISTRATION)) {
+        } else if (cc.equals(REGISTRATION)) {
             departmentNameResponse.put(Constants.REGISTRATION_NAME, response);
-        } else if (cc.equals(Constants.ADMISSION)) {
+        } else if (cc.equals(ADMISSION)) {
             departmentNameResponse.put(Constants.ADMISSION_NAME, response);
         }
         if (totalFinalResponse) {
@@ -212,7 +227,7 @@ public class SearchServiceImpl implements SearchService {
         finalResponse.put(Constants.PERFORMANCE_INDICATORS, performanceIndicatorsResponse);
     }
 
-    private SearchResponse getDashboardSearchResponse(SearchRequest searchRequest, String reportType, Long cc, String flag) {
+    private SearchResponse getDashboardSearchResponse(SearchRequest searchRequest, String reportType, String cc, String flag) {
         SearchResponse searchResponse;
         BoolQueryBuilder finalQuery = QueryBuilders.boolQuery();
         if (flag != null && flag.equals("isGte21")) {
@@ -406,8 +421,7 @@ public class SearchServiceImpl implements SearchService {
                 }
                 break;
             case "assigned_to_id":
-                longValue = ((Number) entry.getValue()).longValue();
-                esTicket.setAssignedToId(longValue);
+                esTicket.setAssignedToId(String.valueOf(entry.getValue()));
                 break;
             case "assigned_to_name":
                 esTicket.setAssignedToName((String) entry.getValue());
@@ -433,8 +447,7 @@ public class SearchServiceImpl implements SearchService {
                 esTicket.setUpdatedDateTS(longValue);
                 break;
             case "last_updated_by":
-                longValue = ((Number) entry.getValue()).longValue();
-                esTicket.setLastUpdatedBy(longValue);
+                esTicket.setLastUpdatedBy(String.valueOf(entry.getValue()));
                 break;
             case "is_escalated":
                 esTicket.setEscalated((Boolean) entry.getValue());
@@ -447,8 +460,7 @@ public class SearchServiceImpl implements SearchService {
                 esTicket.setEscalatedDateTS(longValue);
                 break;
             case "escalated_to":
-                longValue = ((Number) entry.getValue()).longValue();
-                esTicket.setEscalatedTo(longValue);
+                esTicket.setEscalatedTo(String.valueOf(entry.getValue()));
                 break;
             case "status":
                 for (TicketStatus enumValue : TicketStatus.values()) {
@@ -470,8 +482,7 @@ public class SearchServiceImpl implements SearchService {
                 }
                 break;
             case "escalated_by":
-                longValue = ((Number) entry.getValue()).longValue();
-                esTicket.setEscalatedBy(longValue);
+                esTicket.setEscalatedBy(String.valueOf(entry.getValue()));
                 break;
         }
     }
@@ -491,7 +502,7 @@ public class SearchServiceImpl implements SearchService {
             getPriority(String.valueOf(searchRequest.getPriority()), finalQuery);
         }
         if(searchRequest.getFilter().get("cc") != null) {
-            getCCRangeQuery(((Number) searchRequest.getFilter().get("cc")).longValue(), finalQuery);
+            getCCRangeQuery(String.valueOf(searchRequest.getFilter().get("cc")), finalQuery);
         }
         getDateRangeQuery(searchRequest, finalQuery);
         if(searchRequest.getFilter().get("status") != null) {
@@ -512,7 +523,7 @@ public class SearchServiceImpl implements SearchService {
         return finalQuery;
     }
 
-    private BoolQueryBuilder getCCRangeQuery(Long cc, BoolQueryBuilder finalQuery) {
+    private BoolQueryBuilder getCCRangeQuery(String cc, BoolQueryBuilder finalQuery) {
         if (cc != null) {
             MatchQueryBuilder ccMatchQuery = QueryBuilders.matchQuery("assigned_to_id", cc);
             BoolQueryBuilder ccSearchQuery = QueryBuilders.boolQuery();

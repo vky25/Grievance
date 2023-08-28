@@ -21,7 +21,7 @@ public class AssigneeTicketAttachment {
     private Long ticketId;
 
     @Column(name = "user_id", nullable = false)
-    private Long userId;
+    private String userId;
 
     @Column(name = "attachment_url", nullable = false)
     private String attachment_url;

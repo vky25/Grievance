@@ -15,16 +15,12 @@ import java.util.List;
 public class UpdateTicketRequest {
 
     private long id;
-    private long requestedBy;
+    private String requestedBy;
     private TicketStatus status;
-    private Long cc;//AssignedTo
+    //AssignedTo
+    private String cc;
     private TicketPriority priority;
     private String comment;
     private List<String> assigneeAttachmentURLs;
     private Boolean isJunk;
-    //nodal office -
-    // mark as resolved - status - closed,
-    // others cc = -1
-    // junk - update status as closed, isJunk
-    // attachment url -
 }

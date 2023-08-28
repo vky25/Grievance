@@ -39,7 +39,7 @@ public class Ticket {
     private RequesterType requesterType;
 
     @Field(name = "assigned_to_id")
-    private Long assignedToId;
+    private String assignedToId;
 
     @Field(name = "assigned_to_name")
     private String assignedToName;
@@ -63,7 +63,7 @@ public class Ticket {
     private Long updatedDateTS;
 
     @Field(name = "last_updated_by")
-    private Long lastUpdatedBy;
+    private String lastUpdatedBy;
 
     @Field(name = "is_escalated")
     private Boolean escalated;
@@ -75,7 +75,7 @@ public class Ticket {
     private Long escalatedDateTS;
 
     @Field(name = "escalated_to")
-    private Long escalatedTo;
+    private String escalatedTo;
 
     @Field(name = "status")
     private TicketStatus status = TicketStatus.OPEN;
@@ -88,6 +88,6 @@ public class Ticket {
 
     // if the ticket is escalated by system, value will be -1 else superAdmin ID
     @Field(name = "escalated_by")
-    private Long escalatedBy = -1L;
+    private String escalatedBy = "-1";
 
 }
