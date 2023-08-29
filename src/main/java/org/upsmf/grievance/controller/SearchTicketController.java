@@ -34,6 +34,7 @@ public class SearchTicketController {
         try {
             responseTicket = searchService.searchTickets(searchRequest);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
         Response response = new Response(HttpStatus.OK.value(), responseTicket);

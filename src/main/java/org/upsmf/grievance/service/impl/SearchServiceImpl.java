@@ -49,8 +49,8 @@ public class SearchServiceImpl implements SearchService {
     @Value("${exam}")
     private String EXAM;
 
-    @Value("${admission}")
-    private String ADMISSION;
+   /* @Value("${admission}")
+    private String ADMISSION;*/
 
     @Value("${registration}")
     private String REGISTRATION;
@@ -115,9 +115,9 @@ public class SearchServiceImpl implements SearchService {
                         getfinalResponse(searchRequest, AFFILIATION);
                     } else if (cc != null && cc.equals(EXAM)) {
                         getfinalResponse(searchRequest, EXAM);
-                    } else if (cc != null && cc.equals(ADMISSION)) {
+                    }/* else if (cc != null && cc.equals(ADMISSION)) {
                         getfinalResponse(searchRequest, ADMISSION);
-                    } else if (cc != null && cc.equals(REGISTRATION)) {
+                    }*/ else if (cc != null && cc.equals(REGISTRATION)) {
                         getfinalResponse(searchRequest, REGISTRATION);
                     } else if (cc != null && cc.equals(ASSESSMENT)) {
                         getfinalResponse(searchRequest, ASSESSMENT);
@@ -125,7 +125,7 @@ public class SearchServiceImpl implements SearchService {
                         allDepartment = true;
                         getfinalResponse(searchRequest, AFFILIATION);
                         getfinalResponse(searchRequest, EXAM);
-                        getfinalResponse(searchRequest, ADMISSION);
+                        //getfinalResponse(searchRequest, ADMISSION);
                         getfinalResponse(searchRequest, REGISTRATION);
                         totalFinalResponse = true;// This flag should be there before last getfinalResponse
                         getfinalResponse(searchRequest, ASSESSMENT);
@@ -135,7 +135,7 @@ public class SearchServiceImpl implements SearchService {
                 allDepartment = true;
                 getfinalResponse(searchRequest, AFFILIATION);
                 getfinalResponse(searchRequest, EXAM);
-                getfinalResponse(searchRequest, ADMISSION);
+                //getfinalResponse(searchRequest, ADMISSION);
                 getfinalResponse(searchRequest, REGISTRATION);
                 totalFinalResponse = true;// This flag should be there before last getfinalResponse
                 getfinalResponse(searchRequest, ASSESSMENT);
@@ -144,7 +144,7 @@ public class SearchServiceImpl implements SearchService {
             allDepartment = true;
             getfinalResponse(searchRequest, AFFILIATION);
             getfinalResponse(searchRequest, EXAM);
-            getfinalResponse(searchRequest, ADMISSION);
+            //getfinalResponse(searchRequest, ADMISSION);
             getfinalResponse(searchRequest, REGISTRATION);
             totalFinalResponse = true;// This flag should be there before last getfinalResponse
             getfinalResponse(searchRequest, ASSESSMENT);
@@ -190,9 +190,9 @@ public class SearchServiceImpl implements SearchService {
             departmentNameResponse.put(Constants.EXAM_NAME, response);
         } else if (cc.equals(REGISTRATION)) {
             departmentNameResponse.put(Constants.REGISTRATION_NAME, response);
-        } else if (cc.equals(ADMISSION)) {
+        } /*else if (cc.equals(ADMISSION)) {
             departmentNameResponse.put(Constants.ADMISSION_NAME, response);
-        }
+        }*/
         if (totalFinalResponse) {
             getResponse();
         }

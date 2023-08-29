@@ -27,6 +27,7 @@ import org.upsmf.grievance.repository.UserRepository;
 import org.upsmf.grievance.repository.UserRoleRepository;
 import org.upsmf.grievance.service.IntegrationService;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -34,6 +35,7 @@ import java.util.Optional;
 @Slf4j
 public class IntegrationServiceImpl implements IntegrationService {
 
+    public static final String ROLE = "Role";
     @Autowired
     private  RestTemplate restTemplate;
 
@@ -72,10 +74,19 @@ public class IntegrationServiceImpl implements IntegrationService {
     @Override
     public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
         // check for department
+        String module = user.getAttributes().get("module");
+        if(module != null) {
+            user.getAttributes().put("module", module);
+        } else {
+            user.getAttributes().put("module", "grievance");
+        }
         String departmentId = user.getAttributes().get("departmentName");
-        List<Department> departmentList = Department.getById(Integer.valueOf(departmentId));
-        if(departmentList != null && !departmentList.isEmpty()) {
-            user.getAttributes().put("departmentName", departmentList.get(0).name());
+        List<Department> departmentList = new ArrayList<>();
+        if(departmentId != null) {
+            departmentList = Department.getById(Integer.valueOf(departmentId));
+            if(departmentList != null && !departmentList.isEmpty()) {
+                user.getAttributes().put("departmentName", departmentList.get(0).name());
+            }
         }
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
@@ -111,7 +122,10 @@ public class IntegrationServiceImpl implements IntegrationService {
                     // create user department mapping
                     if(savedUser != null && savedUser.getId() > 0 && departmentList != null && !departmentList.isEmpty()) {
                         org.upsmf.grievance.model.Department departmentMap = org.upsmf.grievance.model.Department.builder().departmentName(departmentList.get(0).name()).userId(savedUser.getId()).build();
-                        departmentRepository.save(departmentMap);
+                        org.upsmf.grievance.model.Department userDepartment = departmentRepository.save(departmentMap);
+                        List<org.upsmf.grievance.model.Department> departments = new ArrayList<>();
+                        departments.add(userDepartment);
+                        savedUser.setDepartment(departments);
                     }
                     return new ResponseEntity<>(savedUser, HttpStatus.OK);
                 }
@@ -128,7 +142,7 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     private void createUserRoleMapping(CreateUserDto user, User savedUser) {
         if(savedUser != null && savedUser.getId() > 0) {
-            String role = user.getAttributes().get("role");
+            String role = user.getAttributes().get(ROLE);
             if(role != null && !role.isBlank()) {
                 Role roleDetails = roleRepository.findByName(role);
                 if(roleDetails != null) {
@@ -174,7 +188,7 @@ public class IntegrationServiceImpl implements IntegrationService {
     private User createUserWithApiResponse(JsonNode userContent)throws Exception{
         String[] rolesArray = new String[0];
 
-        JsonNode rolesNode = userContent.path("attributes").path("role");
+        JsonNode rolesNode = userContent.path("attributes").path(ROLE);
         if (rolesNode.isArray()) {
             rolesArray = new String[rolesNode.size()];
             for (int i = 0; i < rolesNode.size(); i++) {

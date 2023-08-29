@@ -29,6 +29,7 @@ public class TicketController {
         try {
             responseTicket = ticketService.save(ticketRequest);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
         Response response = new Response(HttpStatus.OK.value(), responseTicket);

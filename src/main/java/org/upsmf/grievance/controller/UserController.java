@@ -2,13 +2,18 @@ package org.upsmf.grievance.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.upsmf.grievance.dto.CreateUserDto;
 import org.upsmf.grievance.dto.UserDto;
+import org.upsmf.grievance.dto.UserResponseDto;
+import org.upsmf.grievance.model.Department;
 import org.upsmf.grievance.model.User;
 import org.upsmf.grievance.service.IntegrationService;
+
+import java.util.*;
 
 
 @Controller
@@ -31,12 +36,42 @@ public class UserController {
     }
 
     @PostMapping("/create-user")
-    public ResponseEntity<User> createUser(@RequestBody CreateUserDto userRequest) {
+    public ResponseEntity createUser(@RequestBody CreateUserDto userRequest) {
         try {
-            return integrationService.createUser(userRequest);
+            ResponseEntity<User> user =  integrationService.createUser(userRequest);
+            if(user.getStatusCode() == HttpStatus.OK) {
+                return createUserResponse(user.getBody());
+            } else {
+                return ResponseEntity.internalServerError().build();
+            }
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            return ResponseEntity.internalServerError().body(e.getMessage());
         }
+    }
+
+    private ResponseEntity<UserResponseDto> createUserResponse(User body) {
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put("Role", Arrays.asList(body.getRoles()));
+        List<String> department = new ArrayList<>();
+        if(body.getDepartment() != null && !body.getDepartment().isEmpty()) {
+            for(Department depart : body.getDepartment()) {
+                department.add(depart.getDepartmentName());
+            }
+        }
+        attributes.put("departmentName", department);
+        attributes.put("phoneNumber", Arrays.asList(body.getPhoneNumber()));
+        UserResponseDto userResponseDto = UserResponseDto.builder()
+                .email(body.getEmail())
+                .emailVerified(body.isEmailVerified())
+                .enabled(Boolean.valueOf(String.valueOf(body.getStatus())))
+                .firstName(body.getFirstName())
+                .lastName(body.getLastname())
+                .id(body.getId())
+                .keycloakId(body.getKeycloakId())
+                .username(body.getUsername())
+                .attributes(attributes)
+                .build();
+        return ResponseEntity.ok().body(userResponseDto);
     }
 
     @PostMapping("/user")
