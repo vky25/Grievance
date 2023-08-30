@@ -31,7 +31,7 @@ public class UserController {
             integrationService.assignRole(userId, roleId);
             return ResponseEntity.ok("Role assigned successfully.");
         } catch (Exception e) {
-            return ResponseEntity.badRequest().body(e.getMessage());
+            return ResponseEntity.badRequest().body(e.getLocalizedMessage());
         }
     }
 
@@ -45,7 +45,8 @@ public class UserController {
                 return ResponseEntity.internalServerError().build();
             }
         } catch (Exception e) {
-            return ResponseEntity.internalServerError().body(e.getMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(e.getLocalizedMessage());
         }
     }
 
@@ -79,16 +80,17 @@ public class UserController {
         try {
             return integrationService.addUser(userRequest);
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException(e.getLocalizedMessage());
         }
     }
 
     @PutMapping("/update-user")
-    public ResponseEntity<String> updateUser(@RequestBody UserDto userDto) {
+    public ResponseEntity<String> updateUser(@RequestBody CreateUserDto userDto) {
         try {
             integrationService.updateUser(userDto);
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            e.printStackTrace();
+            throw new RuntimeException(e.getLocalizedMessage());
         }
         return ResponseEntity.ok("user updated successfully");
     }
@@ -99,7 +101,7 @@ public class UserController {
             return integrationService.getUsers(payload);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException(e.getLocalizedMessage());
         }
     }
 
@@ -109,7 +111,7 @@ public class UserController {
             return integrationService.getUsers(payload);
         } catch (Exception e) {
             e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException(e.getLocalizedMessage());
         }
     }
 
@@ -128,7 +130,7 @@ public class UserController {
         try {
             return integrationService.activateUser(payload);
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException(e.getLocalizedMessage());
         }
     }
 
@@ -137,7 +139,7 @@ public class UserController {
         try {
             return integrationService.deactivateUser(payload);
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException(e.getLocalizedMessage());
         }
     }
 
@@ -146,7 +148,7 @@ public class UserController {
         try {
             return integrationService.login(body);
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            throw new RuntimeException(e.getLocalizedMessage());
         }
     }
 

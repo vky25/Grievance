@@ -13,7 +13,7 @@ public interface IntegrationService {
     User addUser(User user);
     ResponseEntity<User> createUser(CreateUserDto user) throws Exception;
 
-    ResponseEntity<String> updateUser(UserDto userDto) throws Exception;
+    ResponseEntity<String> updateUser(CreateUserDto userDto) throws Exception;
 
     ResponseEntity<String> getUsers(JsonNode payload) throws Exception;
 

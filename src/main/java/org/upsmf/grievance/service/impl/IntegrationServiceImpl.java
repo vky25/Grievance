@@ -19,7 +19,6 @@ import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.upsmf.grievance.dto.CreateUserDto;
 import org.upsmf.grievance.dto.UserCredentials;
-import org.upsmf.grievance.dto.UserDto;
 import org.upsmf.grievance.dto.UserResponseDto;
 import org.upsmf.grievance.enums.Department;
 import org.upsmf.grievance.exception.runtime.InvalidRequestException;
@@ -140,7 +139,7 @@ public class IntegrationServiceImpl implements IntegrationService {
         JsonNode payload = requestNode;
         JsonNode payloadRoot = mapper.createObjectNode();
         ((ObjectNode) payloadRoot).put("request", payload);
-        ResponseEntity<String> getUsersResponse = getUsers(payloadRoot);
+        ResponseEntity<String> getUsersResponse = searchUsers(payloadRoot);
         return getUsersResponse;
     }
 
@@ -177,15 +176,15 @@ public class IntegrationServiceImpl implements IntegrationService {
 
 
     @Override
-    public ResponseEntity<String> updateUser(UserDto userDto) throws Exception {
+    public ResponseEntity<String> updateUser(CreateUserDto userDto) throws Exception {
+        List<Department> departmentList = new ArrayList<>();
+        getCreateUserRequest(userDto, departmentList);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         ObjectMapper mapper = new ObjectMapper();
         JsonNode root = mapper.createObjectNode();
-        JsonNode request= mapper.createObjectNode();
-        //((ObjectNode) request).put("userId",userDto.getUserId());
-        ((ObjectNode) request).put("password",userDto.getPassword());
-        ((ObjectNode) root).put("request", request);
+        JsonNode jsonNodeObject = mapper.convertValue(userDto, JsonNode.class);
+        ((ObjectNode) root).put("request", jsonNodeObject);
         //TODO need to create dynamically create body
             ResponseEntity<String> response = restTemplate.exchange(
                     updateUserUrl, HttpMethod.PUT,
@@ -239,8 +238,8 @@ public class IntegrationServiceImpl implements IntegrationService {
             }
         }
 
-        if(departmentNode.isArray() && !departmentNode.isEmpty()) {
-            departmentArray = new String[rolesNode.size()];
+        if(userContent.path("attributes").has("departmentName") && departmentNode.isArray() && !departmentNode.isEmpty()) {
+            departmentArray = new String[departmentNode.size()];
             for (int i = 0; i < departmentNode.size(); i++) {
                 departmentArray[i] = departmentNode.get(i).asText();
             }
