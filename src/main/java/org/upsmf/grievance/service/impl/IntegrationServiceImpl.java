@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.upsmf.grievance.dto.CreateUserDto;
+import org.upsmf.grievance.dto.UpdateUserDto;
 import org.upsmf.grievance.dto.UserCredentials;
 import org.upsmf.grievance.dto.UserResponseDto;
 import org.upsmf.grievance.enums.Department;
@@ -75,7 +76,7 @@ public class IntegrationServiceImpl implements IntegrationService {
         return userRepository.save(user);
     }
 
-    @Override
+    /*@Override
     public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
         List<Department> departmentList = new ArrayList<>();
         getCreateUserRequest(user, departmentList);
@@ -122,6 +123,75 @@ public class IntegrationServiceImpl implements IntegrationService {
         }else{
             response.getBody();
             return ResponseEntity.internalServerError().build();
+        }
+    }*/
+
+    @Override
+    public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
+        // check for department
+        String module = user.getAttributes().get("module");
+        if(module != null) {
+            user.getAttributes().put("module", module);
+        } else {
+            user.getAttributes().put("module", "grievance");
+        }
+        String departmentId = user.getAttributes().get("departmentName");
+        List<Department> departmentList = new ArrayList<>();
+        if(departmentId != null) {
+            departmentList = Department.getById(Integer.valueOf(departmentId));
+            if(departmentList != null && !departmentList.isEmpty()) {
+                user.getAttributes().put("departmentName", departmentList.get(0).name());
+            }
+        }
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        ObjectMapper mapper = new ObjectMapper();
+        JsonNode jsonNodeObject = mapper.convertValue(user, JsonNode.class);
+        JsonNode root = mapper.createObjectNode();
+        ((ObjectNode) root).put("request", jsonNodeObject);
+        log.info("Create user Request - {}", root);
+        ResponseEntity response = restTemplate.exchange(createUserUrl, HttpMethod.POST,
+                new HttpEntity<>(root, headers), String.class);
+        log.info("Create user Response - {}", response);
+        if (response.getStatusCode() == HttpStatus.OK) {
+            String userContent = response.getBody().toString();
+
+
+            ObjectNode requestNode = mapper.createObjectNode();
+            requestNode.put("userName", userContent);
+            JsonNode payload = requestNode;
+            JsonNode payloadRoot = mapper.createObjectNode();
+            ((ObjectNode) payloadRoot).put("request", payload);
+            ResponseEntity<String> getUsersResponse = searchUsers(payloadRoot);
+
+            if (getUsersResponse.getStatusCode() == HttpStatus.OK) {
+                String getUsersResponseBody = getUsersResponse.getBody();
+                JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
+
+                if(getUsersJsonNode.size() > 0) {
+                    JsonNode userContentData = getUsersJsonNode;
+                    User newUser = createUserWithApiResponse(userContentData);
+                    User savedUser = userRepository.save(newUser);
+                    // create user role mapping
+                    createUserRoleMapping(user, savedUser);
+                    // create user department mapping
+                    if(savedUser != null && savedUser.getId() > 0 && departmentList != null && !departmentList.isEmpty()) {
+                        org.upsmf.grievance.model.Department departmentMap = org.upsmf.grievance.model.Department.builder().departmentName(departmentList.get(0).name()).userId(savedUser.getId()).build();
+                        org.upsmf.grievance.model.Department userDepartment = departmentRepository.save(departmentMap);
+                        List<org.upsmf.grievance.model.Department> departments = new ArrayList<>();
+                        departments.add(userDepartment);
+                        savedUser.setDepartment(departments);
+                    }
+                    return new ResponseEntity<>(savedUser, HttpStatus.OK);
+                }
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+            else {
+                // Handle error cases here
+                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            }
+        }else{
+            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
@@ -176,22 +246,22 @@ public class IntegrationServiceImpl implements IntegrationService {
 
 
     @Override
-    public ResponseEntity<String> updateUser(CreateUserDto userDto) throws Exception {
-        List<Department> departmentList = new ArrayList<>();
-        getCreateUserRequest(userDto, departmentList);
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode root = mapper.createObjectNode();
-        JsonNode jsonNodeObject = mapper.convertValue(userDto, JsonNode.class);
-        ((ObjectNode) root).put("request", jsonNodeObject);
-        //TODO need to create dynamically create body
-            ResponseEntity<String> response = restTemplate.exchange(
-                    updateUserUrl, HttpMethod.PUT,
-                    new HttpEntity<>(root, headers), String.class
-            );
-            return response;
-
+    public ResponseEntity<String> updateUser(UpdateUserDto userDto) throws Exception {
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_JSON);
+            ObjectMapper mapper = new ObjectMapper();
+            JsonNode root = mapper.createObjectNode();
+            JsonNode jsonNodeObject = mapper.convertValue(userDto, JsonNode.class);
+            ((ObjectNode) jsonNodeObject).remove("keycloakId");
+            ((ObjectNode) jsonNodeObject).remove("id");
+            ((ObjectNode) root).put("userName", userDto.getKeycloakId());
+            ((ObjectNode) root).put("request", jsonNodeObject);
+            restTemplate.put(updateUserUrl, root);
+            return ResponseEntity.ok().body("User updated successful");
+        } catch(Exception e) {
+            throw new RuntimeException(e.getLocalizedMessage());
+        }
     }
 
     @Override

@@ -7,7 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.upsmf.grievance.dto.CreateUserDto;
-import org.upsmf.grievance.dto.UserDto;
+import org.upsmf.grievance.dto.UpdateUserDto;
 import org.upsmf.grievance.dto.UserResponseDto;
 import org.upsmf.grievance.model.Department;
 import org.upsmf.grievance.model.User;
@@ -85,7 +85,7 @@ public class UserController {
     }
 
     @PutMapping("/update-user")
-    public ResponseEntity<String> updateUser(@RequestBody CreateUserDto userDto) {
+    public ResponseEntity<String> updateUser(@RequestBody UpdateUserDto userDto) {
         try {
             integrationService.updateUser(userDto);
         } catch (Exception e) {
