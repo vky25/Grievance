@@ -93,11 +93,22 @@ public class UserController {
         return ResponseEntity.ok("user updated successfully");
     }
 
-    @GetMapping("/users")
+    @GetMapping("/search")
+    public ResponseEntity<String> search(@RequestBody JsonNode payload) {
+        try {
+            return integrationService.getUsers(payload);
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    @PostMapping("/users")
     public ResponseEntity<String> getUsers(@RequestBody JsonNode payload) {
         try {
             return integrationService.getUsers(payload);
         } catch (Exception e) {
+            e.printStackTrace();
             throw new RuntimeException(e.getMessage());
         }
     }

@@ -15,7 +15,11 @@ public interface IntegrationService {
 
     ResponseEntity<String> updateUser(UserDto userDto) throws Exception;
 
-    ResponseEntity<String> getUsers(JsonNode payload) throws JsonProcessingException;
+    ResponseEntity<String> getUsers(JsonNode payload) throws Exception;
+
+    ResponseEntity<String> getUsersFromKeycloak(JsonNode payload) throws Exception;
+
+    ResponseEntity<String> searchUsers(JsonNode payload) throws Exception;
 
     ResponseEntity<User> getUserById(long id) throws RuntimeException;
 

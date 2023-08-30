@@ -1,14 +1,18 @@
 package org.upsmf.grievance.service.impl;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.gax.rpc.NotFoundException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -16,6 +20,7 @@ import org.springframework.web.server.ResponseStatusException;
 import org.upsmf.grievance.dto.CreateUserDto;
 import org.upsmf.grievance.dto.UserCredentials;
 import org.upsmf.grievance.dto.UserDto;
+import org.upsmf.grievance.dto.UserResponseDto;
 import org.upsmf.grievance.enums.Department;
 import org.upsmf.grievance.exception.runtime.InvalidRequestException;
 import org.upsmf.grievance.model.Role;
@@ -27,9 +32,7 @@ import org.upsmf.grievance.repository.UserRepository;
 import org.upsmf.grievance.repository.UserRoleRepository;
 import org.upsmf.grievance.service.IntegrationService;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 @Service
 @Slf4j
@@ -49,6 +52,8 @@ public class IntegrationServiceImpl implements IntegrationService {
     private String updateUserUrl;
     @Value("${api.user.searchUrl}")
     private String apiUrl;
+    @Value("${api.user.listUrl}")
+    private String listUserUrl;
     @Value("${api.user.activeUserUrl}")
     private String activeUserUrl;
 
@@ -174,11 +179,30 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
     @Override
+    public ResponseEntity<String> getUsers(JsonNode payload) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        List<UserResponseDto> childNodes = new ArrayList<>();
+        Pageable pageable = PageRequest.of(payload.get("page").asInt(),payload.get("size").asInt(), Sort.by(Sort.Direction.DESC, "id"));
+        Page<User> users = userRepository.findAll(pageable);
+        if(users.hasContent()) {
+            for (User user : users.getContent()){
+                childNodes.add(createUserResponse(user));
+            }
+        }
+        JsonNode userResponse = mapper.createObjectNode();
+        ((ObjectNode) userResponse).put("count", users.getTotalElements());
+        ArrayNode nodes = mapper.valueToTree(childNodes);
+        ((ObjectNode) userResponse).put("result", nodes);
+        return ResponseEntity.ok(mapper.writeValueAsString(userResponse));
+    }
+
+    @Override
     public void assignRole(Long userId, Long roleId) throws NotFoundException {
         try {
-            User user = userRepository.getById(userId);
-
-            userRepository.save(user);
+            Optional<User> user = userRepository.findById(userId);
+            if (user.isPresent()) {
+                userRepository.save(user.get());
+            }
         } catch (EmptyResultDataAccessException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "User or Role not found", e);
         }
@@ -187,14 +211,24 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     private User createUserWithApiResponse(JsonNode userContent)throws Exception{
         String[] rolesArray = new String[0];
+        String[] departmentArray = new String[0];
 
         JsonNode rolesNode = userContent.path("attributes").path(ROLE);
+        JsonNode departmentNode = userContent.path("attributes").path("departmentName");
         if (rolesNode.isArray()) {
             rolesArray = new String[rolesNode.size()];
             for (int i = 0; i < rolesNode.size(); i++) {
                 rolesArray[i] = rolesNode.get(i).asText();
             }
         }
+
+        if(departmentNode.isArray() && !departmentNode.isEmpty()) {
+            departmentArray = new String[rolesNode.size()];
+            for (int i = 0; i < departmentNode.size(); i++) {
+                departmentArray[i] = departmentNode.get(i).asText();
+            }
+        }
+
         return User.builder()
                 .keycloakId(userContent.path("id").asText())
                 .firstName(userContent.path("firstName").asText())
@@ -210,17 +244,48 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
     @Override
-    public ResponseEntity<String> getUsers(JsonNode payload) throws JsonProcessingException {
+    public ResponseEntity<String> getUsersFromKeycloak(JsonNode payload) throws Exception {
+        ObjectMapper mapper = new ObjectMapper();
+        List<UserResponseDto> childNodes = new ArrayList<>();
+        int i=0;
+        ResponseEntity<String> response = restTemplate.exchange(
+                listUserUrl,
+                HttpMethod.POST,
+                new HttpEntity<>(payload),
+                String.class
+        );
+        if(response.getStatusCode() == HttpStatus.OK) {
+            String getUsersResponseBody = response.getBody();
+            ArrayNode getUsersJsonNode = (ArrayNode) mapper.readTree(getUsersResponseBody);
+            if(getUsersJsonNode.size() > 0) {
+               for(JsonNode node : getUsersJsonNode) {
+                   if(node.path("attributes") != null && !node.path("attributes").isEmpty()
+                           && node.path("attributes").path("module") != null && !node.path("attributes").path("module").isEmpty()
+                           && node.get("attributes").path("module").get(0).textValue().equalsIgnoreCase("grievance")) {
+                       log.info("Grievance user node found || {} -- {}",i++, node);
+                       User user = createUserWithApiResponse(node);
+                       childNodes.add(createUserResponse(user));
+                   }
+               }
+            }
+        }
+        JsonNode userResponse = mapper.createObjectNode();
+        ((ObjectNode) userResponse).put("count", i);
+        ArrayNode nodes = mapper.valueToTree(childNodes);
+        ((ObjectNode) userResponse).put("result", nodes);
+        return ResponseEntity.ok(mapper.writeValueAsString(userResponse));
+    }
 
-        ResponseEntity response = restTemplate.exchange(
+    @Override
+    public ResponseEntity<String> searchUsers(JsonNode payload) throws Exception {
+
+        ResponseEntity<String> response = restTemplate.exchange(
                 apiUrl,
                 HttpMethod.POST,
                 new HttpEntity<>(payload),
                 String.class
         );
-
         return response;
-
     }
 
     @Override
@@ -318,6 +383,31 @@ public class IntegrationServiceImpl implements IntegrationService {
             throw new InvalidRequestException("Invalid Request");
         }
 
+    }
+
+    private UserResponseDto createUserResponse(User body) {
+        Map<String, List<String>> attributes = new HashMap<>();
+        attributes.put("Role", Arrays.asList(body.getRoles()));
+        List<String> department = new ArrayList<>();
+        if(body.getDepartment() != null && !body.getDepartment().isEmpty()) {
+            for(org.upsmf.grievance.model.Department depart : body.getDepartment()) {
+                department.add(depart.getDepartmentName());
+            }
+        }
+        attributes.put("departmentName", department);
+        attributes.put("phoneNumber", Arrays.asList(body.getPhoneNumber()));
+        UserResponseDto userResponseDto = UserResponseDto.builder()
+                .email(body.getEmail())
+                .emailVerified(body.isEmailVerified())
+                .enabled(Boolean.valueOf(String.valueOf(body.getStatus())))
+                .firstName(body.getFirstName())
+                .lastName(body.getLastname())
+                .id(body.getId())
+                .keycloakId(body.getKeycloakId())
+                .username(body.getUsername())
+                .attributes(attributes)
+                .build();
+        return userResponseDto;
     }
 
 
