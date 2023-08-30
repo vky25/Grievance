@@ -61,10 +61,14 @@ public class UserController {
         }
         attributes.put("departmentName", department);
         attributes.put("phoneNumber", Arrays.asList(body.getPhoneNumber()));
+        boolean enabled = false;
+        if(body.getStatus() == 1) {
+            enabled = true;
+        }
         UserResponseDto userResponseDto = UserResponseDto.builder()
                 .email(body.getEmail())
                 .emailVerified(body.isEmailVerified())
-                .enabled(Boolean.valueOf(String.valueOf(body.getStatus())))
+                .enabled(enabled)
                 .firstName(body.getFirstName())
                 .lastName(body.getLastname())
                 .id(body.getId())
