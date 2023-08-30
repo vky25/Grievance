@@ -6,14 +6,28 @@ import java.util.stream.Collectors;
 
 public enum Department {
 
-    REGISTRATION(1), EXAM(2), HALL_TICKET(3), OTHERS(-1);
+    REGISTRATION(1, "Registration"), AFFILIATION(2, "Affiliation"), ASSESSMENT(3, "Assessment"), HALL_TICKET(4, "Hall Ticket"), OTHERS(-1, "Others");
 
     private int id;
+    private String code;
     Department(int id) {
         this.id = id;
     }
 
+    Department(int id, String code) {
+        this.id = id;
+        this.code = code;
+    }
+
     public static List<Department> getById(int id) {
        return Arrays.stream(Department.values()).filter(x -> x.id == id).collect(Collectors.toList());
+    }
+
+    public int getId() {
+        return id;
+    }
+
+    public String getCode() {
+        return code;
     }
 }

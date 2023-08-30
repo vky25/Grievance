@@ -140,7 +140,7 @@ public class IntegrationServiceImpl implements IntegrationService {
         if(departmentId != null) {
             departmentList = Department.getById(Integer.valueOf(departmentId));
             if(departmentList != null && !departmentList.isEmpty()) {
-                user.getAttributes().put("departmentName", departmentList.get(0).name());
+                user.getAttributes().put("departmentName", departmentList.get(0).getCode());
             }
         }
         HttpHeaders headers = new HttpHeaders();
@@ -176,7 +176,7 @@ public class IntegrationServiceImpl implements IntegrationService {
                     createUserRoleMapping(user, savedUser);
                     // create user department mapping
                     if(savedUser != null && savedUser.getId() > 0 && departmentList != null && !departmentList.isEmpty()) {
-                        org.upsmf.grievance.model.Department departmentMap = org.upsmf.grievance.model.Department.builder().departmentName(departmentList.get(0).name()).userId(savedUser.getId()).build();
+                        org.upsmf.grievance.model.Department departmentMap = org.upsmf.grievance.model.Department.builder().departmentName(departmentList.get(0).getCode()).userId(savedUser.getId()).build();
                         org.upsmf.grievance.model.Department userDepartment = departmentRepository.save(departmentMap);
                         List<org.upsmf.grievance.model.Department> departments = new ArrayList<>();
                         departments.add(userDepartment);
@@ -225,7 +225,7 @@ public class IntegrationServiceImpl implements IntegrationService {
         if(departmentId != null) {
             departmentList = Department.getById(Integer.valueOf(departmentId));
             if(departmentList != null && !departmentList.isEmpty()) {
-                user.getAttributes().put("departmentName", departmentList.get(0).name());
+                user.getAttributes().put("departmentName", departmentList.get(0).getCode());
             }
         }
 

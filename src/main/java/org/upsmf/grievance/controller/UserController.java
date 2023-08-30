@@ -88,7 +88,7 @@ public class UserController {
         }
     }
 
-    @PutMapping("/update-user")
+    @PostMapping("/update-user")
     public ResponseEntity<String> updateUser(@RequestBody UpdateUserDto userDto) {
         try {
             integrationService.updateUser(userDto);
