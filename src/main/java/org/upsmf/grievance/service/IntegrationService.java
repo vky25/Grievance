@@ -21,7 +21,7 @@ public interface IntegrationService {
 
     ResponseEntity<String> searchUsers(JsonNode payload) throws Exception;
 
-    ResponseEntity<UserResponseDto> getUserById(long id) throws RuntimeException;
+    ResponseEntity<UserResponseDto> getUserById(String id) throws RuntimeException;
 
     void assignRole(Long userId, Long roleId) throws NotFoundException;
 

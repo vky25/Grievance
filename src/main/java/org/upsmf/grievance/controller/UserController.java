@@ -114,8 +114,13 @@ public class UserController {
     }
 
     @GetMapping("/info")
-    public ResponseEntity<UserResponseDto> getUsersById(@RequestParam("id") long id) throws RuntimeException{
-        return integrationService.getUserById(id);
+    public ResponseEntity getUsersById(@RequestParam("id") String id) throws RuntimeException{
+        try {
+            return integrationService.getUserById(id);
+        } catch (Exception e) {
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body(e.getLocalizedMessage());
+        }
     }
 
     @PostMapping("/activate")

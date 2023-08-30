@@ -289,11 +289,11 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
     @Override
-    public ResponseEntity<UserResponseDto> getUserById(long id) throws RuntimeException {
-        Optional<User> user = userRepository.findById(id);
+    public ResponseEntity<UserResponseDto> getUserById(String id) throws RuntimeException {
+        Optional<User> user = userRepository.findByKeycloakId(id);
         if(user.isPresent()) {
             User userDetails = user.get();
-        return new ResponseEntity<>(createUserResponse(userDetails), HttpStatus.OK);
+            return new ResponseEntity<>(createUserResponse(userDetails), HttpStatus.OK);
         }
         throw new RuntimeException("User details not found.");
     }
