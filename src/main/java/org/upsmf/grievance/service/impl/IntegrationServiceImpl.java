@@ -78,46 +78,27 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Override
     public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
-        // check for department
-        String module = user.getAttributes().get("module");
-        if(module != null) {
-            user.getAttributes().put("module", module);
-        } else {
-            user.getAttributes().put("module", "grievance");
-        }
-        String departmentId = user.getAttributes().get("departmentName");
         List<Department> departmentList = new ArrayList<>();
-        if(departmentId != null) {
-            departmentList = Department.getById(Integer.valueOf(departmentId));
-            if(departmentList != null && !departmentList.isEmpty()) {
-                user.getAttributes().put("departmentName", departmentList.get(0).name());
-            }
-        }
+        getCreateUserRequest(user, departmentList);
+        // set headers
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
+        // create request
         ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNodeObject = mapper.convertValue(user, JsonNode.class);
         JsonNode root = mapper.createObjectNode();
         ((ObjectNode) root).put("request", jsonNodeObject);
         log.info("Create user Request - {}", root);
+        // make API call
         ResponseEntity response = restTemplate.exchange(createUserUrl, HttpMethod.POST,
                 new HttpEntity<>(root, headers), String.class);
         log.info("Create user Response - {}", response);
+        // validate response
         if (response.getStatusCode() == HttpStatus.OK) {
-            String userContent = response.getBody().toString();
-
-
-            ObjectNode requestNode = mapper.createObjectNode();
-            requestNode.put("userName", userContent);
-            JsonNode payload = requestNode;
-            JsonNode payloadRoot = mapper.createObjectNode();
-            ((ObjectNode) payloadRoot).put("request", payload);
-            ResponseEntity<String> getUsersResponse = getUsers(payloadRoot);
-
+            ResponseEntity<String> getUsersResponse = getUserDetailsFromKeycloak(response, mapper);
             if (getUsersResponse.getStatusCode() == HttpStatus.OK) {
                 String getUsersResponseBody = getUsersResponse.getBody();
                 JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
-
                 if(getUsersJsonNode.size() > 0) {
                     JsonNode userContentData = getUsersJsonNode;
                     User newUser = createUserWithApiResponse(userContentData);
@@ -134,15 +115,51 @@ public class IntegrationServiceImpl implements IntegrationService {
                     }
                     return new ResponseEntity<>(savedUser, HttpStatus.OK);
                 }
-                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-            else {
+                return ResponseEntity.internalServerError().build();
+            } else {
                 // Handle error cases here
-                return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+                return ResponseEntity.internalServerError().build();
             }
         }else{
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+            response.getBody();
+            return ResponseEntity.internalServerError().build();
         }
+    }
+
+    private ResponseEntity<String> getUserDetailsFromKeycloak(ResponseEntity response, ObjectMapper mapper) throws Exception {
+        String userContent = response.getBody().toString();
+        // if error then error body will be sent
+        if(userContent.startsWith("{")) {
+            JsonNode createUserResponseNode = mapper.readTree(userContent);
+            if(createUserResponseNode != null && createUserResponseNode.has("errorMessage")) {
+                throw new RuntimeException("User exists with same username");
+            }
+        }
+        ObjectNode requestNode = mapper.createObjectNode();
+        requestNode.put("userName", userContent);
+        JsonNode payload = requestNode;
+        JsonNode payloadRoot = mapper.createObjectNode();
+        ((ObjectNode) payloadRoot).put("request", payload);
+        ResponseEntity<String> getUsersResponse = getUsers(payloadRoot);
+        return getUsersResponse;
+    }
+
+    private static void getCreateUserRequest(CreateUserDto user, List<Department> departmentList) {
+        // check for department
+        String module = user.getAttributes().get("module");
+        if(module != null) {
+            user.getAttributes().put("module", module);
+        } else {
+            user.getAttributes().put("module", "grievance");
+        }
+        String departmentId = user.getAttributes().get("departmentName");
+        if(departmentId != null) {
+            departmentList = Department.getById(Integer.valueOf(departmentId));
+            if(departmentList != null && !departmentList.isEmpty()) {
+                user.getAttributes().put("departmentName", departmentList.get(0).name());
+            }
+        }
+
     }
 
     private void createUserRoleMapping(CreateUserDto user, User savedUser) {
