@@ -1,11 +1,11 @@
 package org.upsmf.grievance.service;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.google.api.gax.rpc.NotFoundException;
 import org.springframework.http.ResponseEntity;
 import org.upsmf.grievance.dto.CreateUserDto;
 import org.upsmf.grievance.dto.UserDto;
+import org.upsmf.grievance.dto.UserResponseDto;
 import org.upsmf.grievance.model.User;
 
 public interface IntegrationService {
@@ -21,7 +21,7 @@ public interface IntegrationService {
 
     ResponseEntity<String> searchUsers(JsonNode payload) throws Exception;
 
-    ResponseEntity<User> getUserById(long id) throws RuntimeException;
+    ResponseEntity<UserResponseDto> getUserById(long id) throws RuntimeException;
 
     void assignRole(Long userId, Long roleId) throws NotFoundException;
 

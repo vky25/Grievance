@@ -114,7 +114,7 @@ public class UserController {
     }
 
     @GetMapping("/info")
-    public ResponseEntity<User> getUsersById(@RequestParam("id") long id) throws RuntimeException{
+    public ResponseEntity<UserResponseDto> getUsersById(@RequestParam("id") long id) throws RuntimeException{
         return integrationService.getUserById(id);
     }
 
