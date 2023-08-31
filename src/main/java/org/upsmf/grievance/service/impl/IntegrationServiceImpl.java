@@ -258,9 +258,50 @@ public class IntegrationServiceImpl implements IntegrationService {
             ((ObjectNode) root).put("userName", userDto.getKeycloakId());
             ((ObjectNode) root).put("request", jsonNodeObject);
             restTemplate.put(updateUserUrl, root);
+            // update postgres db
+            updateUserData(userDto);
             return ResponseEntity.ok().body("User updated successful");
         } catch(Exception e) {
             throw new RuntimeException(e.getLocalizedMessage());
+        }
+    }
+
+    private void updateUserData(UpdateUserDto userDto) {
+        Optional<User> user = userRepository.findById(userDto.getId());
+        if(user.isPresent()) {
+            User userDetails = user.get();
+            int status = 0;
+            if(userDto.isEnabled()){
+                status = 1;
+            }
+            userDetails.setFirstName(userDto.getFirstName());
+            userDetails.setLastname(userDto.getLastName());
+            userDetails.setEmail(userDto.getEmail());
+            userDetails.setStatus(status);
+            if(userDto.getAttributes()!=null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("phoneNumber")) {
+                userDetails.setPhoneNumber(userDto.getAttributes().get("phoneNumber"));
+            }
+            if(userDto.getAttributes()!=null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("Role")) {
+                String[] role = new String[1];
+                role[0] = userDto.getAttributes().get("Role");
+                userDetails.setRoles(role);
+            }
+            // updating user
+            userDetails = userRepository.save(userDetails);
+
+            // updating user department mapping
+            if(userDto.getAttributes()!=null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("departmentName")) {
+                String departmentName = userDto.getAttributes().get("departmentName");
+                List<Department> departmentList = Department.getByCode(departmentName);
+                if(departmentList != null && !departmentList.isEmpty()) {
+                    org.upsmf.grievance.model.Department userDepartment = departmentRepository.findByUserId(userDetails.getId());
+                    if(userDepartment != null) {
+                        userDepartment.setDepartmentName(departmentList.get(0).getCode());
+                        userDepartment = departmentRepository.save(userDepartment);
+                    }
+                }
+            }
+
         }
     }
 

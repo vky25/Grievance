@@ -23,6 +23,10 @@ public enum Department {
        return Arrays.stream(Department.values()).filter(x -> x.id == id).collect(Collectors.toList());
     }
 
+    public static List<Department> getByCode(String code) {
+        return Arrays.stream(Department.values()).filter(x -> x.code.equals(code)).collect(Collectors.toList());
+    }
+
     public int getId() {
         return id;
     }
