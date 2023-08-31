@@ -1,5 +1,6 @@
 package org.upsmf.grievance.service.impl;
 
+import lombok.extern.slf4j.Slf4j;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.RequestOptions;
@@ -32,6 +33,7 @@ import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 @Service
+@Slf4j
 public class SearchServiceImpl implements SearchService {
 
     @Value("${es.default.page.size}")
@@ -293,6 +295,7 @@ public class SearchServiceImpl implements SearchService {
         org.elasticsearch.action.search.SearchRequest search = new org.elasticsearch.action.search.SearchRequest("ticket");
         search.searchType(SearchType.QUERY_THEN_FETCH);
         search.source(searchSourceBuilder);
+        log.info("query string - {}", searchSourceBuilder);
         try {
             searchResponse = esConfig.elasticsearchClient().search(search, RequestOptions.DEFAULT);
         } catch (IOException e) {
@@ -492,9 +495,19 @@ public class SearchServiceImpl implements SearchService {
         // search by keyword
         if (searchRequest.getSearchKeyword() != null && !searchRequest.getSearchKeyword().isBlank()) {
             RegexpQueryBuilder firstNameKeywordMatchQuery = QueryBuilders.regexpQuery("requester_first_name", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
+            RegexpQueryBuilder lastNameKeywordMatchQuery = QueryBuilders.regexpQuery("requester_last_name", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             RegexpQueryBuilder phoneKeywordMatchQuery = QueryBuilders.regexpQuery("requester_phone", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             RegexpQueryBuilder emailKeywordMatchQuery = QueryBuilders.regexpQuery("requester_email", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             BoolQueryBuilder keywordSearchQuery = QueryBuilders.boolQuery();
+            keywordSearchQuery.should(lastNameKeywordMatchQuery);
+            try {
+                Integer intValue = Integer.parseInt(searchRequest.getSearchKeyword());
+                MatchQueryBuilder ticketIdKeywordMatchQuery = QueryBuilders.matchQuery("ticket_id",  intValue);
+                keywordSearchQuery.should(ticketIdKeywordMatchQuery);
+            } catch (NumberFormatException e) {
+                log.error("unable to parse value ", e);
+            }
+
             keywordSearchQuery.should(firstNameKeywordMatchQuery).should(phoneKeywordMatchQuery).should(emailKeywordMatchQuery);
             finalQuery.must(keywordSearchQuery);
         }
