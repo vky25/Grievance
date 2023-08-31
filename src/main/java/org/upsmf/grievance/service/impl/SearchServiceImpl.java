@@ -498,8 +498,11 @@ public class SearchServiceImpl implements SearchService {
             RegexpQueryBuilder lastNameKeywordMatchQuery = QueryBuilders.regexpQuery("requester_last_name", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             RegexpQueryBuilder phoneKeywordMatchQuery = QueryBuilders.regexpQuery("requester_phone", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             RegexpQueryBuilder emailKeywordMatchQuery = QueryBuilders.regexpQuery("requester_email", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
+            RegexpQueryBuilder escalatedDateKeywordMatchQuery = QueryBuilders.regexpQuery("escalated_date", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
+            RegexpQueryBuilder requesterTypeKeywordMatchQuery = QueryBuilders.regexpQuery("requester_type", ".*" + searchRequest.getSearchKeyword().toUpperCase() + ".*");
+            RegexpQueryBuilder createdDateKeywordMatchQuery = QueryBuilders.regexpQuery("created_date", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             BoolQueryBuilder keywordSearchQuery = QueryBuilders.boolQuery();
-            keywordSearchQuery.should(lastNameKeywordMatchQuery);
+            keywordSearchQuery.should(lastNameKeywordMatchQuery).should(escalatedDateKeywordMatchQuery).should(requesterTypeKeywordMatchQuery).should(createdDateKeywordMatchQuery);
             try {
                 Integer intValue = Integer.parseInt(searchRequest.getSearchKeyword());
                 MatchQueryBuilder ticketIdKeywordMatchQuery = QueryBuilders.matchQuery("ticket_id",  intValue);
