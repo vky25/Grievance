@@ -1,5 +1,7 @@
 package org.upsmf.grievance.service.impl;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.*;
 import lombok.extern.slf4j.Slf4j;
@@ -79,7 +81,12 @@ public class AttachmentServiceImpl implements AttachmentService {
             URL url = blob.signUrl(30, TimeUnit.DAYS);
             log.info("URL - {}", url);
             String urlString = url.toURI().toString();
-            return ResponseEntity.ok(urlString);
+            ObjectMapper mapper = new ObjectMapper();
+            ObjectNode urlNode = mapper.createObjectNode();
+            urlNode.put("url", urlString);
+            ObjectNode node = mapper.createObjectNode();
+            node.put("result", urlNode);
+            return ResponseEntity.ok(mapper.writeValueAsString(node));
         } catch (IOException e) {
             log.error("Error while uploading attachment", e);
             return ResponseEntity.internalServerError().body("Error while uploading file.");

@@ -57,6 +57,9 @@ public class TicketServiceImpl implements TicketService {
     @Autowired
     private OtpService otpService;
 
+    @Value("${feedback.base.url}")
+    private String feedbackBaseUrl;
+
     /**
      *
      * @param ticket
@@ -189,8 +192,30 @@ public class TicketServiceImpl implements TicketService {
         TicketStatus currentTicketStatus=curentUpdatedTicket.getStatus();
         curentUpdatedTicket.getEmail();
         curentUpdatedTicket.getTicketId();
-        otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "updated Ticket for " +curentUpdatedTicket.getTicketId() ,"ticket as updated to" +curentUpdatedTicket.getStatus().name());
+        if(curentUpdatedTicket.getStatus().name().equalsIgnoreCase(TicketStatus.CLOSED.name()) && !curentUpdatedTicket.getJunk()) {
+            String link = generateLinkFeedbackLink(curentUpdatedTicket);
+            otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "updated Ticket for " +curentUpdatedTicket.getTicketId() ,"ticket as updated to " +curentUpdatedTicket.getStatus().name()+ " Please provide your feedback by visiting below link."+link);
+            return ticket;
+        }
+        otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "updated Ticket for " +curentUpdatedTicket.getTicketId() ,"ticket as updated to " +curentUpdatedTicket.getStatus().name());
         return ticket;
+    }
+
+    private String generateLinkFeedbackLink(org.upsmf.grievance.model.es.Ticket curentUpdatedTicket) {
+        List<Comments> comments = commentRepository.findAllByTicketId(curentUpdatedTicket.getTicketId());
+        Comments latestComment =null;
+        if(comments!=null && comments.size() > 0) {
+            latestComment = comments.get(comments.size()-1);
+        }
+        return feedbackBaseUrl.concat("?").concat("guestName=")
+                .concat(curentUpdatedTicket.getFirstName().concat("%20").concat(curentUpdatedTicket.getLastName()))
+                .concat("&ticketId=").concat(String.valueOf(curentUpdatedTicket.getTicketId()))
+                .concat("&resolutionComment=").concat(latestComment!=null?latestComment.getComment():"")
+                .concat("&email=").concat(curentUpdatedTicket.getEmail())
+                .concat("&phone=").concat(curentUpdatedTicket.getPhone())
+                .concat("&ticketTitle=").concat(curentUpdatedTicket.getDescription());
+
+        //https://grievances.uphrh.in/feedback?guestName=Devendra&ticketId=123&ticketTitle=Registration&resolutionComment=Resolved
     }
 
     @Override
