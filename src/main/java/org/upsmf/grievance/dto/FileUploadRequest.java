@@ -1,9 +1,7 @@
 package org.upsmf.grievance.dto;
 
 import lombok.*;
-
-import java.io.File;
-import java.sql.Timestamp;
+import org.springframework.web.multipart.MultipartFile;
 
 @Data
 @NoArgsConstructor
@@ -12,10 +10,8 @@ import java.sql.Timestamp;
 @ToString
 public class FileUploadRequest {
 
-    private File file;
-    private String fileName;
-    private String fileExtension;
-    private Timestamp createdDate;
-    private Timestamp updatedDate;
+    @Getter
+    private MultipartFile file;
     private Long uploadedBy;
+
 }

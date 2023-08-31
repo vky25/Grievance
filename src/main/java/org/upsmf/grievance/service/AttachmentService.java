@@ -1,10 +1,9 @@
 package org.upsmf.grievance.service;
 
-import org.upsmf.grievance.dto.FileUploadRequest;
-
-import java.io.IOException;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.multipart.MultipartFile;
 
 public interface AttachmentService {
 
-    void uploadObject(FileUploadRequest fileUploadRequest);
+    ResponseEntity<String> uploadObject(MultipartFile file);
 }

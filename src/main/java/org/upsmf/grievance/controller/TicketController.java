@@ -5,11 +5,11 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.upsmf.grievance.dto.FileUploadRequest;
-import org.upsmf.grievance.model.Ticket;
-import org.upsmf.grievance.model.reponse.Response;
+import org.springframework.web.multipart.MultipartFile;
 import org.upsmf.grievance.dto.TicketRequest;
 import org.upsmf.grievance.dto.UpdateTicketRequest;
+import org.upsmf.grievance.model.Ticket;
+import org.upsmf.grievance.model.reponse.Response;
 import org.upsmf.grievance.service.AttachmentService;
 import org.upsmf.grievance.service.TicketService;
 
@@ -56,13 +56,11 @@ public class TicketController {
     }
 
     @PostMapping("/file/upload")
-    public ResponseEntity upload(@RequestBody FileUploadRequest fileUploadRequest) {
-        Ticket responseTicket = null;
+    public ResponseEntity upload(@RequestParam("file") MultipartFile file) {
         try {
-            attachmentService.uploadObject(fileUploadRequest);
+            return attachmentService.uploadObject(file);
         } catch (Exception e) {
-            throw new RuntimeException(e.getMessage());
+            return ResponseEntity.internalServerError().body(e.getLocalizedMessage());
         }
-        return new ResponseEntity(HttpStatus.OK);
     }
 }

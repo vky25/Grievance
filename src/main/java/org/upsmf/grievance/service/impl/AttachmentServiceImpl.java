@@ -3,14 +3,23 @@ package org.upsmf.grievance.service.impl;
 import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.*;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.tika.Tika;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.upsmf.grievance.dto.FileUploadRequest;
+import org.springframework.web.multipart.MultipartFile;
 import org.upsmf.grievance.service.AttachmentService;
 
+import java.io.FileInputStream;
 import java.io.IOException;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.concurrent.TimeUnit;
+
 
 @Service
 @Slf4j
@@ -43,23 +52,62 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Value("${gcp.private.key.id}")
     private String gcpPrivateKeyId;
 
+    @Value("${gcp.sub.folder.path}")
+    private String subFolderPath;
+
     @Override
-    public void uploadObject(FileUploadRequest fileUploadRequest) {
+    public ResponseEntity<String> uploadObject(MultipartFile file) {
+        Path filePath = null;
         try {
-            Path filePath = Files.createTempFile(fileUploadRequest.getFileName().split(".")[0], fileUploadRequest.getFileName().split(".")[1]);
+            // validate file
+            String fileName = file.getOriginalFilename();
+            filePath = Files.createTempFile(fileName.split("\\.")[0], fileName.split("\\.")[1]);
+            file.transferTo(filePath);
+            validateFile(filePath);
+            // create credentials
             ServiceAccountCredentials credentials = ServiceAccountCredentials.fromPkcs8(gcpClientId, gcpClientEmail,
-                    gcpPkcsKey, gcpPrivateKeyId, new java.util.ArrayList<String>());
-            System.out.println("credentials created");
+                    gcpPkcsKey, gcpPrivateKeyId, new ArrayList<String>());
+            log.info("credentials created");
             Storage storage = StorageOptions.newBuilder().setProjectId(gcpProjectId).setCredentials(credentials).build().getService();
-            System.out.println("storage object created");
-            BlobId blobId = BlobId.of(gcpBucketName, fileUploadRequest.getFileName());
+            log.info("storage object created");
+            String gcpFileName = gcpFolderName+"/"+Calendar.getInstance().getTimeInMillis()+"_"+fileName;
+            BlobId blobId = BlobId.of(gcpBucketName, gcpFileName);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).build();
-            Blob blob = storage.createFrom(blobInfo, filePath);
+            Blob blob = storage.create(blobInfo, new FileInputStream(filePath.toFile()));
             // TODO return correct response after testing
-            System.out.println(blob);
+            log.info(blob.toString());
+            URL url = blob.signUrl(30, TimeUnit.DAYS);
+            log.info("URL - {}", url);
+            String urlString = url.toURI().toString();
+            return ResponseEntity.ok(urlString);
         } catch (IOException e) {
             log.error("Error while uploading attachment", e);
+            return ResponseEntity.internalServerError().body("Error while uploading file.");
+        } catch (URISyntaxException e) {
+            log.error("Error converting url ", e);
+            return ResponseEntity.internalServerError().body("Error while uploading file.");
+        } finally {
+            if(filePath != null) {
+                try {
+                    Files.delete(filePath);
+                } catch (IOException e) {
+                    log.error("Unable to delete temp file", e);
+                }
+            }
         }
     }
 
+    private boolean validateFile(Path path) throws IOException {
+        if(Files.isExecutable(path)) {
+            throw new RuntimeException("Invalid file");
+        }
+        Tika tika = new Tika();
+        String fileExt = tika.detect(path);
+        if(fileExt.equalsIgnoreCase("application/pdf")) {
+            return true;
+        } else if(fileExt.startsWith("image")) {
+            return true;
+        }
+        throw new RuntimeException("Invalid file type. Supported files are PDF and Images.");
+    }
 }
