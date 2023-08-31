@@ -518,7 +518,11 @@ public class SearchServiceImpl implements SearchService {
             getPriority(String.valueOf(searchRequest.getPriority()), finalQuery);
         }
         if(searchRequest.getFilter().get("cc") != null) {
-            getCCRangeQuery(String.valueOf(searchRequest.getFilter().get("cc")), finalQuery);
+            if(String.valueOf(searchRequest.getFilter().get("cc")).equals("0")) {
+                getCCRangeQueryNot(String.valueOf(-1), finalQuery);
+            } else {
+                getCCRangeQuery(String.valueOf(searchRequest.getFilter().get("cc")), finalQuery);
+            }
         }
         getDateRangeQuery(searchRequest, finalQuery);
         if(searchRequest.getFilter().get("status") != null) {
@@ -544,6 +548,16 @@ public class SearchServiceImpl implements SearchService {
             MatchQueryBuilder ccMatchQuery = QueryBuilders.matchQuery("assigned_to_id", cc);
             BoolQueryBuilder ccSearchQuery = QueryBuilders.boolQuery();
             ccSearchQuery.must(ccMatchQuery);
+            finalQuery.must(ccSearchQuery);
+        }
+        return finalQuery;
+    }
+
+    private BoolQueryBuilder getCCRangeQueryNot(String cc, BoolQueryBuilder finalQuery) {
+        if (cc != null) {
+            MatchQueryBuilder ccMatchQuery = QueryBuilders.matchQuery("assigned_to_id", cc);
+            BoolQueryBuilder ccSearchQuery = QueryBuilders.boolQuery();
+            ccSearchQuery.mustNot(ccMatchQuery);
             finalQuery.must(ccSearchQuery);
         }
         return finalQuery;
