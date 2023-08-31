@@ -4,7 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.util.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
-import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.upsmf.grievance.dto.TicketRequest;
 import org.upsmf.grievance.dto.UpdateTicketRequest;
@@ -24,8 +24,9 @@ import org.upsmf.grievance.util.DateUtil;
 
 import javax.transaction.Transactional;
 import java.sql.Timestamp;
+import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Calendar;
+import java.time.temporal.ChronoUnit;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -40,6 +41,9 @@ public class TicketServiceImpl implements TicketService {
     @Autowired
     @Qualifier("ticketRepository")
     private org.upsmf.grievance.repository.TicketRepository ticketRepository;
+
+    @Value("${ticket.escalation.days}")
+    private String ticketEscalationDays;
 
     @Autowired
     private CommentRepository commentRepository;
@@ -126,6 +130,7 @@ public class TicketServiceImpl implements TicketService {
      */
     private Ticket createTicketWithDefault(TicketRequest ticketRequest) throws Exception {
         Timestamp currentTimestamp = new Timestamp(DateUtil.getCurrentDate().getTime());
+        LocalDateTime escalationDateTime = LocalDateTime.now().plus(Long.valueOf(ticketEscalationDays), ChronoUnit.DAYS);
         return Ticket.builder()
                 .createdDate(new Timestamp(DateUtil.getCurrentDate().getTime()))
                 .firstName(ticketRequest.getFirstName())
@@ -139,7 +144,7 @@ public class TicketServiceImpl implements TicketService {
                 .updatedDate(currentTimestamp)
                 .lastUpdatedBy("-1")
                 .escalated(false)
-                .escalatedDate(null)
+                .escalatedDate(Timestamp.valueOf(escalationDateTime))
                 .escalatedTo("-1")
                 .status(TicketStatus.OPEN)
                 .requestType(ticketRequest.getRequestType())
