@@ -140,10 +140,10 @@ public class IntegrationServiceImpl implements IntegrationService {
         } else {
             user.getAttributes().put("module", "grievance");
         }
-        String departmentId = user.getAttributes().get("departmentName");
+        String departmentName = user.getAttributes().get("departmentName");
         List<Department> departmentList = new ArrayList<>();
-        if(departmentId != null) {
-            departmentList = Department.getById(Integer.valueOf(departmentId));
+        if(departmentName != null) {
+            departmentList = Department.getByCode(departmentName);
             if(departmentList != null && !departmentList.isEmpty()) {
                 user.getAttributes().put("departmentName", departmentList.get(0).getCode());
             }

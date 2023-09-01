@@ -185,6 +185,7 @@ public class TicketServiceImpl implements TicketService {
         if(esTicketDetails.isPresent()) {
             // TODO revisit this
             esTicketRepository.deleteById(esTicketDetails.get().getId());
+            updatedESTicket.setRating(esTicketDetails.get().getRating());
         }
         org.upsmf.grievance.model.es.Ticket curentUpdatedTicket=esTicketRepository.save(updatedESTicket);
         //send mail to enduser
@@ -214,8 +215,6 @@ public class TicketServiceImpl implements TicketService {
                 .concat("&email=").concat(curentUpdatedTicket.getEmail())
                 .concat("&phone=").concat(curentUpdatedTicket.getPhone())
                 .concat("&ticketTitle=").concat(curentUpdatedTicket.getDescription());
-
-        //https://grievances.uphrh.in/feedback?guestName=Devendra&ticketId=123&ticketTitle=Registration&resolutionComment=Resolved
     }
 
     @Override
@@ -303,7 +302,8 @@ public class TicketServiceImpl implements TicketService {
                 .requestType(ticket.getRequestType())
                 .priority(ticket.getPriority())
                 .escalatedBy(ticket.getEscalatedBy())
-                .escalatedTo(ticket.getEscalatedTo()).build();
+                .escalatedTo(ticket.getEscalatedTo())
+                .rating(Long.valueOf(0)).build();
     }
 
     /**

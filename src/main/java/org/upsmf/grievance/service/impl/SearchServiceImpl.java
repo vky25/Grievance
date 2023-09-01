@@ -487,6 +487,10 @@ public class SearchServiceImpl implements SearchService {
             case "escalated_by":
                 esTicket.setEscalatedBy(String.valueOf(entry.getValue()));
                 break;
+            case "rating":
+                longValue = ((Number) entry.getValue()).longValue();
+                esTicket.setRating(longValue);
+                break;
         }
     }
 

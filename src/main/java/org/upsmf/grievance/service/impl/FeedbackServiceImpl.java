@@ -9,10 +9,13 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.upsmf.grievance.dto.FeedbackDto;
 import org.upsmf.grievance.model.es.Feedback;
+import org.upsmf.grievance.model.es.Ticket;
 import org.upsmf.grievance.model.reponse.FeedbackResponse;
 import org.upsmf.grievance.repository.es.FeedbackRepository;
+import org.upsmf.grievance.repository.es.TicketRepository;
 import org.upsmf.grievance.service.FeedbackService;
 
+import java.util.Optional;
 import java.util.regex.Pattern;
 
 @Service
@@ -25,24 +28,37 @@ public class FeedbackServiceImpl implements FeedbackService {
     @Autowired
     private FeedbackRepository feedbackRepository;
 
+    @Autowired
+    private TicketRepository esTicketRepository;
+
     @Override
     public void saveFeedback(FeedbackDto feedbackDto) {
 
         // validate request -- all fields are mandatory except comment
         validateFeedbackDto(feedbackDto);
         try{
+            Feedback feedback = Feedback.builder()
+                    .firstName(feedbackDto.getFirstName())
+                    .lastName(feedbackDto.getLastName())
+                    .email(feedbackDto.getEmail())
+                    .phone(feedbackDto.getPhone())
+                    .rating(feedbackDto.getRating())
+                    .comment(feedbackDto.getComment()!=null?feedbackDto.getComment():"").build();
 
-        Feedback feedback = Feedback.builder()
-                .firstName(feedbackDto.getFirstName())
-                .lastName(feedbackDto.getLastName())
-                .email(feedbackDto.getEmail())
-                .phone(feedbackDto.getPhone())
-                .rating(feedbackDto.getRating())
-                .comment(feedbackDto.getComment()!=null?feedbackDto.getComment():"").build();
-
-        log.info("Saving feedback: {}", feedback);
-        feedbackRepository.save(feedback);
-        log.info("Feedback saved successfully");
+            log.info("Saving feedback: {}", feedback);
+            feedbackRepository.save(feedback);
+            // update same rating in ES ticket
+            if(feedbackDto.getTicketId() != null && feedbackDto.getTicketId() > 0) {
+                Optional<Ticket> esTicket = esTicketRepository.findOneByTicketId(feedbackDto.getTicketId());
+                if (esTicket.isPresent()) {
+                    Ticket ticket = esTicket.get();
+                    ticket.setRating(Long.valueOf(feedbackDto.getRating()));
+                    esTicketRepository.save(ticket);
+                }
+            } else {
+                log.error("Unable to update rating in Ticket");
+            }
+            log.info("Feedback saved successfully");
         } catch (Exception e) {
             e.printStackTrace();
         }

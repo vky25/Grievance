@@ -90,4 +90,7 @@ public class Ticket {
     @Field(name = "escalated_by")
     private String escalatedBy = "-1";
 
+    @Field(name = "rating")
+    private Long rating = 0L;
+
 }
