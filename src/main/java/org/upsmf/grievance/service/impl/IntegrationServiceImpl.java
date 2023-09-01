@@ -14,6 +14,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
+import org.springframework.mail.SimpleMailMessage;
+import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
@@ -70,6 +72,9 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Autowired
     private DepartmentRepository departmentRepository;
+
+    @Autowired
+    private JavaMailSender mailSender;
 
     @Override
     public User addUser(User user) {
@@ -143,6 +148,7 @@ public class IntegrationServiceImpl implements IntegrationService {
                 user.getAttributes().put("departmentName", departmentList.get(0).getCode());
             }
         }
+        String generatePassword = validateAndCreateDefaultPassword(user);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
         ObjectMapper mapper = new ObjectMapper();
@@ -182,6 +188,8 @@ public class IntegrationServiceImpl implements IntegrationService {
                         departments.add(userDepartment);
                         savedUser.setDepartment(departments);
                     }
+                    // send mail with password
+                    sendCreateUserEmail(savedUser.getEmail(), savedUser.getUsername(), generatePassword);
                     return new ResponseEntity<>(savedUser, HttpStatus.OK);
                 }
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
@@ -193,6 +201,53 @@ public class IntegrationServiceImpl implements IntegrationService {
         }else{
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
+    }
+
+    private String validateAndCreateDefaultPassword(CreateUserDto user) {
+        if(user != null) {
+            if(user.getCredentials() != null && !user.getCredentials().isEmpty()) {
+                boolean autoCreate = true;
+                String existingPassword = null;
+                for(UserCredentials credentials : user.getCredentials()) {
+                    if(credentials.getType() != null && credentials.getType().equalsIgnoreCase("password")) {
+                        if(credentials.getValue() != null && !credentials.getValue().isBlank()) {
+                            autoCreate = false;
+                            existingPassword = credentials.getValue();
+                        }
+                    }
+                }
+                if(autoCreate) {
+                    return generatePassword(user);
+                }
+                return existingPassword;
+            } else {
+                // generate random password and set in user
+                return generatePassword(user);
+            }
+        }
+        throw new RuntimeException("Error while generating password");
+    }
+
+    private String generatePassword(CreateUserDto user) {
+        String randomPassword = generateRandomPassword();
+        UserCredentials userCredential = UserCredentials.builder().type("password").value(randomPassword).temporary(false).build();
+        user.setCredentials(Collections.singletonList(userCredential));
+        return randomPassword;
+    }
+
+    private String generateRandomPassword() {
+        int leftLimit = 97; // letter 'a'
+        int rightLimit = 122; // letter 'z'
+        int targetStringLength = 10;
+        Random random = new Random();
+
+        String generatedString = random.ints(leftLimit, rightLimit + 1)
+                .limit(targetStringLength)
+                .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
+                .toString();
+
+        log.debug("random password - {}", generatedString);
+        return generatedString;
     }
 
     private ResponseEntity<String> getUserDetailsFromKeycloak(ResponseEntity response, ObjectMapper mapper) throws Exception {
@@ -539,6 +594,14 @@ public class IntegrationServiceImpl implements IntegrationService {
                 .attributes(attributes)
                 .build();
         return userResponseDto;
+    }
+
+    private void sendCreateUserEmail(String email, String userName, String password) {
+        SimpleMailMessage message = new SimpleMailMessage();
+        message.setTo(email);
+        message.setSubject("Grievance Account Details");
+        message.setText("Account is created for Grievance.\nPlease find the login credentials for your account.\n\nUsername: " + userName + " \nPassword: "+password);
+        mailSender.send(message);
     }
 
 

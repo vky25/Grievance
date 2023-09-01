@@ -194,10 +194,10 @@ public class TicketServiceImpl implements TicketService {
         curentUpdatedTicket.getTicketId();
         if(curentUpdatedTicket.getStatus().name().equalsIgnoreCase(TicketStatus.CLOSED.name()) && !curentUpdatedTicket.getJunk()) {
             String link = generateLinkFeedbackLink(curentUpdatedTicket);
-            otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "updated Ticket for " +curentUpdatedTicket.getTicketId() ,"ticket as updated to " +curentUpdatedTicket.getStatus().name()+ " Please provide your feedback by visiting below link."+link);
+            otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "Status for Grievance Ticket ID - " +curentUpdatedTicket.getTicketId() ,"Your grievance ticket has been updated to  " +curentUpdatedTicket.getStatus().name()+ ".\nPlease provide your feedback by visiting below link.\n\n"+link);
             return ticket;
         }
-        otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "updated Ticket for " +curentUpdatedTicket.getTicketId() ,"ticket as updated to " +curentUpdatedTicket.getStatus().name());
+        otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "Status for Grievance Ticket ID - " +curentUpdatedTicket.getTicketId() ,"Your grievance ticket has been updated to " +curentUpdatedTicket.getStatus().name());
         return ticket;
     }
 
