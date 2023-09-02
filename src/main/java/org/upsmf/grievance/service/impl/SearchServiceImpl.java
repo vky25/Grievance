@@ -170,7 +170,7 @@ public class SearchServiceImpl implements SearchService {
         totalOpenStatus = totalOpenStatus + searchOpenStatusResponse.getHits().getTotalHits().value;
         totalcloseStatus = totalcloseStatus + searchClosedStatusResponse.getHits().getTotalHits().value;
         totalIsEscalated = totalIsEscalated + searchIsEsclatedResponse.getHits().getTotalHits().value;
-        totalUnassigned = totalUnassigned + searchUnassignedResponse.getHits().getTotalHits().value;
+        totalUnassigned = searchUnassignedResponse.getHits().getTotalHits().value;
         totalNudgeTickets = totalNudgeTickets + searchPriorityResponse.getHits().getTotalHits().value;
         totalOpenTicketGte21 = totalOpenTicketGte21 + searchOpenTicketsGte21Response.getHits().getTotalHits().value;
         long totalTicketsCount = searchJunkResponse.getHits().getTotalHits().value + searchOpenStatusResponse.getHits().getTotalHits().value
