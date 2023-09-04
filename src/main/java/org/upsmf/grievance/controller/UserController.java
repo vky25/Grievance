@@ -147,7 +147,7 @@ public class UserController {
             return createUserResponse(user);
         } catch (Exception e) {
             e.printStackTrace();
-            return ResponseEntity.internalServerError().body("Error in activating user.");
+            return ResponseEntity.internalServerError().body("Error in de-activating user.");
         }
     }
 
