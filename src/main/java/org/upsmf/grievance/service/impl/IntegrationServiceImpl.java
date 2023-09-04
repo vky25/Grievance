@@ -305,6 +305,14 @@ public class IntegrationServiceImpl implements IntegrationService {
         try {
             HttpHeaders headers = new HttpHeaders();
             headers.setContentType(MediaType.APPLICATION_JSON);
+            String departmentName = userDto.getAttributes().get("departmentName");
+            List<Department> departmentList = new ArrayList<>();
+            if(departmentName != null) {
+                departmentList = Department.getById(Integer.valueOf(departmentName));
+                if(departmentList != null && !departmentList.isEmpty()) {
+                    userDto.getAttributes().put("departmentName", departmentList.get(0).getCode());
+                }
+            }
             ObjectMapper mapper = new ObjectMapper();
             JsonNode root = mapper.createObjectNode();
             JsonNode jsonNodeObject = mapper.convertValue(userDto, JsonNode.class);
@@ -347,7 +355,7 @@ public class IntegrationServiceImpl implements IntegrationService {
             // updating user department mapping
             if(userDto.getAttributes()!=null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("departmentName")) {
                 String departmentName = userDto.getAttributes().get("departmentName");
-                List<Department> departmentList = Department.getById(Integer.valueOf(departmentName));
+                List<Department> departmentList = Department.getByCode(String.valueOf(departmentName));
                 if(departmentList != null && !departmentList.isEmpty()) {
                     org.upsmf.grievance.model.Department userDepartment = departmentRepository.findByUserId(userDetails.getId());
                     if(userDepartment != null) {
