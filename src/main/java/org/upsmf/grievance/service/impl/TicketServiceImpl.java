@@ -10,14 +10,12 @@ import org.upsmf.grievance.dto.TicketRequest;
 import org.upsmf.grievance.dto.UpdateTicketRequest;
 import org.upsmf.grievance.enums.TicketPriority;
 import org.upsmf.grievance.enums.TicketStatus;
-import org.upsmf.grievance.model.AssigneeTicketAttachment;
-import org.upsmf.grievance.model.Comments;
-import org.upsmf.grievance.model.RaiserTicketAttachment;
-import org.upsmf.grievance.model.Ticket;
+import org.upsmf.grievance.model.*;
 import org.upsmf.grievance.repository.AssigneeTicketAttachmentRepository;
 import org.upsmf.grievance.repository.CommentRepository;
 import org.upsmf.grievance.repository.RaiserTicketAttachmentRepository;
 import org.upsmf.grievance.repository.es.TicketRepository;
+import org.upsmf.grievance.service.EmailService;
 import org.upsmf.grievance.service.OtpService;
 import org.upsmf.grievance.service.TicketService;
 import org.upsmf.grievance.util.DateUtil;
@@ -60,6 +58,9 @@ public class TicketServiceImpl implements TicketService {
     @Value("${feedback.base.url}")
     private String feedbackBaseUrl;
 
+    @Autowired
+    private EmailService emailService;
+
     /**
      *
      * @param ticket
@@ -83,7 +84,6 @@ public class TicketServiceImpl implements TicketService {
         org.upsmf.grievance.model.es.Ticket esticket = convertToESTicketObj(ticket);
         // save ticket in ES
         esTicketRepository.save(esticket);
-        // TODO send mail
         return psqlTicket;
     }
 
@@ -120,8 +120,9 @@ public class TicketServiceImpl implements TicketService {
         Ticket ticket = createTicketWithDefault(ticketRequest);
         // create ticket
         ticket = saveWithAttachment(ticket, ticketRequest.getAttachmentUrls());
-        // TODO get email subject and body from db
-        otpService.sendGenericEmail(ticketRequest.getEmail(), "Ticket Created", "You ticket is created with ID "+ticket.getId()+" at "+ticket.getCreatedDate());
+        // send mail
+        EmailDetails emailDetails = EmailDetails.builder().recipient(ticket.getEmail()).subject("New Complaint Registration").build();
+        emailService.sendCreateTicketMail(emailDetails, ticket);
         return ticket;
     }
 
