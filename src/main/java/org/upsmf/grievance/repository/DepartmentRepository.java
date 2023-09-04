@@ -8,4 +8,6 @@ import org.upsmf.grievance.model.Department;
 public interface DepartmentRepository extends JpaRepository<Department, Long> {
 
     Department findByUserId(long userId);
+
+    void deleteByUserId(long userId);
 }

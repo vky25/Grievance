@@ -348,6 +348,9 @@ public class IntegrationServiceImpl implements IntegrationService {
                 String[] role = new String[1];
                 role[0] = userDto.getAttributes().get("Role");
                 userDetails.setRoles(role);
+                if(role[0].equalsIgnoreCase("SUPERADMIN")) {
+                    departmentRepository.deleteByUserId(userDetails.getId());
+                }
             }
             // updating user
             userDetails = userRepository.save(userDetails);
@@ -490,45 +493,59 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Override
     public User activateUser(JsonNode payload) throws Exception{
-        ObjectMapper mapper = new ObjectMapper();
-        ResponseEntity<String> response = restTemplate.exchange(
-                activeUserUrl, HttpMethod.POST,
-                new HttpEntity<>(payload), String.class
-        );
-        if (response.getStatusCode() == HttpStatus.OK) {
-            String getUsersResponseBody = response.getBody();
-            JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
-
-            JsonNode userContentData = getUsersJsonNode.path("result").path("response").path("content").get(0);
-            // get user by key
-            String userName = payload.get("userName").asText();
-            User user = userRepository.findByUsername(userName);
-            user.setStatus(1);
-            return userRepository.save(user);
+        long id = payload.get("id").asLong(-1);
+        if(id > 0) {
+            Optional<User> user = userRepository.findById(id);
+            if(user.isPresent()){
+                User userDetails = user.get();
+                try {
+                    ObjectMapper mapper = new ObjectMapper();
+                    ObjectNode root = mapper.createObjectNode();
+                    root.put("username", userDetails.getUsername());
+                    ResponseEntity<String> response = restTemplate.exchange(
+                            activeUserUrl, HttpMethod.POST,
+                            new HttpEntity<>(root), String.class
+                    );
+                    if (response.getStatusCode() == HttpStatus.OK) {
+                        userDetails.setStatus(1);
+                        return userRepository.save(userDetails);
+                    }
+                    throw new RuntimeException("Error in activating user.");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw new RuntimeException("Error in activating user.");
+                }
+            }
         }
-        throw new RuntimeException("Error in activating user.");
+        throw new RuntimeException("Unable to find user details for provided Id.");
     }
 
     @Override
     public User deactivateUser(JsonNode payload) throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
-        ResponseEntity<String> response = restTemplate.exchange(
-                deactivateUserUrl, HttpMethod.POST,
-                new HttpEntity<>(payload), String.class
-        );
-        if (response.getStatusCode() == HttpStatus.OK) {
-            String getUsersResponseBody = response.getBody();
-            JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
-
-            JsonNode userContentData = getUsersJsonNode.path("result").path("response").path("content").get(0);
-
-            // get user by key
-            String userName = payload.get("userName").asText();
-            User user = userRepository.findByUsername(userName);
-            user.setStatus(0);
-            return userRepository.save(user);
+        long id = payload.get("id").asLong(-1);
+        if(id > 0) {
+            Optional<User> user = userRepository.findById(id);
+            if(user.isPresent()){
+                User userDetails = user.get();
+                ObjectMapper mapper = new ObjectMapper();
+                ObjectNode root = mapper.createObjectNode();
+                root.put("username", userDetails.getUsername());
+                try {
+                    ResponseEntity<String> response = restTemplate.exchange(
+                        deactivateUserUrl, HttpMethod.POST,
+                        new HttpEntity<>(root), String.class);
+                    if (response.getStatusCode() == HttpStatus.OK) {
+                        userDetails.setStatus(0);
+                        return userRepository.save(userDetails);
+                    }
+                    throw new RuntimeException("Error in deactivating user.");
+                } catch (Exception e) {
+                    e.printStackTrace();
+                    throw new RuntimeException("Error in deactivating user.");
+                }
+            }
         }
-        throw new RuntimeException("Error in deactivating user.");
+        throw new RuntimeException("Unable to find user details for provided Id.");
     }
 
     @Override
