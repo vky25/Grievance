@@ -25,9 +25,9 @@ public interface IntegrationService {
 
     void assignRole(Long userId, Long roleId) throws NotFoundException;
 
-    ResponseEntity<User> activateUser(JsonNode payload) throws Exception;
+    User activateUser(JsonNode payload) throws Exception;
 
-    ResponseEntity<User> deactivateUser(JsonNode payload) throws Exception;
+    User deactivateUser(JsonNode payload) throws Exception;
 
     ResponseEntity<String> login(JsonNode body);
 }

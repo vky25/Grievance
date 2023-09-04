@@ -130,20 +130,24 @@ public class UserController {
     }
 
     @PostMapping("/activate")
-    public ResponseEntity<User> activateUser(@RequestBody JsonNode payload) {
+    public ResponseEntity activateUser(@RequestBody JsonNode payload) {
         try {
-            return integrationService.activateUser(payload);
+            User user = integrationService.activateUser(payload);
+            return createUserResponse(user);
         } catch (Exception e) {
-            throw new RuntimeException(e.getLocalizedMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Error in activating user.");
         }
     }
 
     @PostMapping("/deactivate")
-    public ResponseEntity<User> deactivateUser(@RequestBody JsonNode payload) {
+    public ResponseEntity deactivateUser(@RequestBody JsonNode payload) {
         try {
-            return integrationService.deactivateUser(payload);
+            User user = integrationService.deactivateUser(payload);
+            return createUserResponse(user);
         } catch (Exception e) {
-            throw new RuntimeException(e.getLocalizedMessage());
+            e.printStackTrace();
+            return ResponseEntity.internalServerError().body("Error in activating user.");
         }
     }
 

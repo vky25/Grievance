@@ -143,7 +143,7 @@ public class IntegrationServiceImpl implements IntegrationService {
         String departmentName = user.getAttributes().get("departmentName");
         List<Department> departmentList = new ArrayList<>();
         if(departmentName != null) {
-            departmentList = Department.getByCode(departmentName);
+            departmentList = Department.getById(Integer.valueOf(departmentName));
             if(departmentList != null && !departmentList.isEmpty()) {
                 user.getAttributes().put("departmentName", departmentList.get(0).getCode());
             }
@@ -347,7 +347,7 @@ public class IntegrationServiceImpl implements IntegrationService {
             // updating user department mapping
             if(userDto.getAttributes()!=null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("departmentName")) {
                 String departmentName = userDto.getAttributes().get("departmentName");
-                List<Department> departmentList = Department.getByCode(departmentName);
+                List<Department> departmentList = Department.getById(Integer.valueOf(departmentName));
                 if(departmentList != null && !departmentList.isEmpty()) {
                     org.upsmf.grievance.model.Department userDepartment = departmentRepository.findByUserId(userDetails.getId());
                     if(userDepartment != null) {
@@ -481,7 +481,7 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
     @Override
-    public ResponseEntity<User> activateUser(JsonNode payload) throws Exception{
+    public User activateUser(JsonNode payload) throws Exception{
         ObjectMapper mapper = new ObjectMapper();
         ResponseEntity<String> response = restTemplate.exchange(
                 activeUserUrl, HttpMethod.POST,
@@ -492,20 +492,17 @@ public class IntegrationServiceImpl implements IntegrationService {
             JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
 
             JsonNode userContentData = getUsersJsonNode.path("result").path("response").path("content").get(0);
-
-            User newUser = createUserWithApiResponse(userContentData);
-            User savedUser = userRepository.save(newUser);
-
-            return new ResponseEntity<>(savedUser, HttpStatus.OK);
+            // get user by key
+            String userName = payload.get("userName").asText();
+            User user = userRepository.findByUsername(userName);
+            user.setStatus(1);
+            return userRepository.save(user);
         }
-        else {
-            // Handle error cases here
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        throw new RuntimeException("Error in activating user.");
     }
 
     @Override
-    public ResponseEntity<User> deactivateUser(JsonNode payload) throws Exception {
+    public User deactivateUser(JsonNode payload) throws Exception {
         ObjectMapper mapper = new ObjectMapper();
         ResponseEntity<String> response = restTemplate.exchange(
                 deactivateUserUrl, HttpMethod.POST,
@@ -517,15 +514,13 @@ public class IntegrationServiceImpl implements IntegrationService {
 
             JsonNode userContentData = getUsersJsonNode.path("result").path("response").path("content").get(0);
 
-            User newUser = createUserWithApiResponse(userContentData);
-            User savedUser = userRepository.save(newUser);
-
-            return new ResponseEntity<>(savedUser, HttpStatus.OK);
+            // get user by key
+            String userName = payload.get("userName").asText();
+            User user = userRepository.findByUsername(userName);
+            user.setStatus(0);
+            return userRepository.save(user);
         }
-        else {
-            // Handle error cases here
-            return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-        }
+        throw new RuntimeException("Error in deactivating user.");
     }
 
     @Override
