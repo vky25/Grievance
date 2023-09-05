@@ -25,6 +25,7 @@ import java.sql.Timestamp;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
+import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -189,33 +190,35 @@ public class TicketServiceImpl implements TicketService {
             updatedESTicket.setRating(esTicketDetails.get().getRating());
         }
         org.upsmf.grievance.model.es.Ticket curentUpdatedTicket=esTicketRepository.save(updatedESTicket);
-        //send mail to enduser
-        // TODO get email subject and body from db
+        //send mail to end user
         TicketStatus currentTicketStatus=curentUpdatedTicket.getStatus();
         curentUpdatedTicket.getEmail();
         curentUpdatedTicket.getTicketId();
-        if(curentUpdatedTicket.getStatus().name().equalsIgnoreCase(TicketStatus.CLOSED.name()) && !curentUpdatedTicket.getJunk()) {
-            String link = generateLinkFeedbackLink(curentUpdatedTicket);
-            otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "Status for Grievance Ticket ID - " +curentUpdatedTicket.getTicketId() ,"Your grievance ticket has been updated to  " +curentUpdatedTicket.getStatus().name()+ ".\nPlease provide your feedback by visiting below link.\n\n"+link);
+        if(curentUpdatedTicket.getStatus().name().equalsIgnoreCase(TicketStatus.CLOSED.name())) {
+            generateFeedbackLinkAndEmail(ticket);
             return ticket;
         }
-        otpService.sendGenericEmail(curentUpdatedTicket.getEmail(), "Status for Grievance Ticket ID - " +curentUpdatedTicket.getTicketId() ,"Your grievance ticket has been updated to " +curentUpdatedTicket.getStatus().name());
+        EmailDetails resolutionOfYourGrievance = EmailDetails.builder().subject("Update on Ticket Status - " +curentUpdatedTicket.getTicketId()).recipient(curentUpdatedTicket.getEmail()).build();
+        emailService.sendUpdateTicketMail(resolutionOfYourGrievance, ticket);
         return ticket;
     }
 
-    private String generateLinkFeedbackLink(org.upsmf.grievance.model.es.Ticket curentUpdatedTicket) {
-        List<Comments> comments = commentRepository.findAllByTicketId(curentUpdatedTicket.getTicketId());
+    private void generateFeedbackLinkAndEmail(Ticket curentUpdatedTicket) {
+        List<Comments> comments = commentRepository.findAllByTicketId(curentUpdatedTicket.getId());
         Comments latestComment =null;
         if(comments!=null && comments.size() > 0) {
             latestComment = comments.get(comments.size()-1);
         }
-        return feedbackBaseUrl.concat("?").concat("guestName=")
+        String comment = latestComment!=null?latestComment.getComment():"";
+        String link = feedbackBaseUrl.concat("?").concat("guestName=")
                 .concat(curentUpdatedTicket.getFirstName().concat("%20").concat(curentUpdatedTicket.getLastName()))
-                .concat("&ticketId=").concat(String.valueOf(curentUpdatedTicket.getTicketId()))
-                .concat("&resolutionComment=").concat(latestComment!=null?latestComment.getComment():"")
+                .concat("&ticketId=").concat(String.valueOf(curentUpdatedTicket.getId()))
+                .concat("&resolutionComment=").concat(comment)
                 .concat("&email=").concat(curentUpdatedTicket.getEmail())
                 .concat("&phone=").concat(curentUpdatedTicket.getPhone())
                 .concat("&ticketTitle=").concat(curentUpdatedTicket.getDescription());
+        EmailDetails resolutionOfYourGrievance = EmailDetails.builder().subject("Resolution of Your Grievance").recipient(curentUpdatedTicket.getEmail()).build();
+        emailService.sendClosedTicketMail(resolutionOfYourGrievance, curentUpdatedTicket, comment, Collections.EMPTY_LIST, link);
     }
 
     @Override

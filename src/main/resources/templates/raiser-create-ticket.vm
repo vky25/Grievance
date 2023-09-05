@@ -102,11 +102,11 @@
                                                                                         <p>Sincerely,</p>
                                                                                         <p>
                                                                                             <div>${signature_name}</div>
+                                                                                            <div>${address}</div>
                                                                                             <div>${phone}</div>
                                                                                             <div>${mobile}</div>
                                                                                             <div>${fax}</div>
                                                                                             <div>${email}</div>
-                                                                                            <div>${address}</div>
                                                                                         </p>
                                                                                     </td>
                                                                                 </tr>

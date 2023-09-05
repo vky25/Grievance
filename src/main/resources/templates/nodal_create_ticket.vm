@@ -85,31 +85,31 @@
                                                                                     <td align="justify" class="esd-block-text es-m-txt-l">
                                                                                         <p></br></p>
                                                                                         <p>Dear ${first_name},</p>
-                                                                                        <p>We hope this email finds you well. We are writing to provide you with an update regarding your recent ticket with us, ${ticket_number}.</p>
-                                                                                        <p>We are pleased to inform you that significant progress has been made in resolving the issue you reported. Our dedicated team has been diligently working on your case, and we are confident that we are moving towards a resolution.</p>
+                                                                                        <p>We hope this email finds you well. We want to inform you that a new grievance ticket has been assigned to you for resolution.</br> The ticket details are as follows:</p>
                                                                                         <p>
-                                                                                            <div>Here is a brief overview of the status:</div>
                                                                                             <div>Grievance ID: <strong>${id}</strong></div>
-                                                                                            <div>Date of Registration: <strong>${created_date}</strong></div>
-                                                                                            <div>Current Status: <strong>${status}</strong></div>
-                                                                                            <div>Date of Last Update: <strong>${updated_date}</strong></div>
+                                                                                            <div>Date Created: <strong>${created_date}</strong></div>
+                                                                                            <div>Priority: <strong>${priority}</strong></div>
+                                                                                            <div>Category: <strong>${department}</strong></div>
+                                                                                            <div>Status: <strong>${status}</strong></div>
                                                                                         </p>
-                                                                                        <p>Our support team is continuously monitoring the situation to ensure that all necessary steps are taken to address your concerns effectively and efficiently. Rest assured; we are committed to providing you with the best possible resolution.</p>
-                                                                                        <p>If you have any additional information or updates that could be helpful for our team to better understand your issue, please feel free to share it with us. Your input is valuable and can contribute to a swifter resolution.</p>
-                                                                                        <p>We will keep you updated on any further developments regarding your ticket.</p>
+                                                                                        <p>You have been selected to handle this ticket based on your expertise and availability. We trust in your ability to provide a timely and effective resolution for the reported issue.</p>
+                                                                                        <p>
+                                                                                            <div>Please take the following steps:</div>
+                                                                                            <div>1. Review the details of the issue and any previous correspondence related to the ticket. If you find the grievance ticket is not related to your department, please change the category to “others”. If you find you don’t have sufficient information to proceed, please mark the ticket as “junk”.</div>
+                                                                                            <div>2. Assess the situation and gather any necessary information or resources.</div>
+                                                                                            <div>3. Initiate communication with the ticket requester and keep them informed about the progress.</div>
+                                                                                            <div>4. Work towards a satisfactory resolution, ensuring the highest level of customer satisfaction.</div>
+                                                                                        </p>
+                                                                                        <p>You can track and manage the ticket's progress by logging into our support portal at ${site_url} using your credentials.</p>
                                                                                     </td>
                                                                                 </tr>
                                                                                 <tr></tr>
                                                                                 <tr>
                                                                                     <td align="left" class="esd-block-text">
-                                                                                        <p>Sincerely,</p>
+                                                                                        <p>Best regards,</p>
                                                                                         <p>
-                                                                                            <div>${signature_name}</div>
-                                                                                            <div>${address}</div>
-                                                                                            <div>${phone}</div>
-                                                                                            <div>${mobile}</div>
-                                                                                            <div>${fax}</div>
-                                                                                            <div>${email}</div>
+                                                                                            <div>UPSMF Grievance Management Team</div>
                                                                                         </p>
                                                                                     </td>
                                                                                 </tr>
