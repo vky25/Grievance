@@ -14,9 +14,12 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.*;
+import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.util.LinkedMultiValueMap;
+import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.upsmf.grievance.dto.CreateUserDto;
@@ -500,11 +503,15 @@ public class IntegrationServiceImpl implements IntegrationService {
                 User userDetails = user.get();
                 try {
                     ObjectMapper mapper = new ObjectMapper();
+                    ObjectNode request = mapper.createObjectNode();
                     ObjectNode root = mapper.createObjectNode();
-                    root.put("username", userDetails.getUsername());
+                    root.put("userName", userDetails.getKeycloakId());
+                    request.put("request", root);
+                    HttpHeaders headers = new HttpHeaders();
+                    headers.setContentType(MediaType.APPLICATION_JSON);
                     ResponseEntity<String> response = restTemplate.exchange(
                             activeUserUrl, HttpMethod.POST,
-                            new HttpEntity<>(root), String.class
+                            new HttpEntity<JsonNode>(request, headers), String.class
                     );
                     if (response.getStatusCode() == HttpStatus.OK) {
                         userDetails.setStatus(1);
@@ -528,12 +535,17 @@ public class IntegrationServiceImpl implements IntegrationService {
             if(user.isPresent()){
                 User userDetails = user.get();
                 ObjectMapper mapper = new ObjectMapper();
+                ObjectNode request = mapper.createObjectNode();
                 ObjectNode root = mapper.createObjectNode();
-                root.put("username", userDetails.getUsername());
+                root.put("userName", userDetails.getKeycloakId());
+                request.put("request", root);
+                HttpHeaders headers = new HttpHeaders();
+                headers.setContentType(MediaType.APPLICATION_JSON);
                 try {
+                    restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
                     ResponseEntity<String> response = restTemplate.exchange(
                         deactivateUserUrl, HttpMethod.POST,
-                        new HttpEntity<>(root), String.class);
+                        new HttpEntity<>(request, headers), String.class);
                     if (response.getStatusCode() == HttpStatus.OK) {
                         userDetails.setStatus(0);
                         return userRepository.save(userDetails);
