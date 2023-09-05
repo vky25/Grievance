@@ -51,16 +51,15 @@ public class EmailServiceImpl implements EmailService {
                     velocityContext.put("first_name", ticket.getFirstName());
                     velocityContext.put("id", ticket.getId());
                     velocityContext.put("created_date", DateUtil.getFormattedDateInString(ticket.getCreatedDate()));
-                    // TODO
+                    // signature
                     velocityContext.put("signature_name", "U.P. State Medical Faculty");
+                    velocityContext.put("address", "Address: 5, Sarvpalli, Mall Avenue Road,  Lucknow - 226001 (U.P.) India");
                     velocityContext.put("phone", "Phone: (0522) 2238846, 2235964, 2235965, 3302100");
                     velocityContext.put("mobile", "Mobile : +91-8400955546 / +91-9151024463");
                     velocityContext.put("fax", "Fax : (0522) 2236600");
                     velocityContext.put("email", "Email:  upmedicalfaculty@upsmfac.org");
-                    velocityContext.put("address", "Address: 5, Sarvpalli, Mall Avenue Road,  Lucknow - 226001 (U.P.) India");
 
                     StringWriter stringWriter = new StringWriter();
-
                     velocityEngine.mergeTemplate("templates/raiser-create-ticket.vm", "UTF-8", velocityContext, stringWriter);
 
                     message.setText(stringWriter.toString(), true);
