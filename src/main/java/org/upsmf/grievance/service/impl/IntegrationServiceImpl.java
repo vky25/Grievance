@@ -84,56 +84,6 @@ public class IntegrationServiceImpl implements IntegrationService {
         return userRepository.save(user);
     }
 
-    /*@Override
-    public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
-        List<Department> departmentList = new ArrayList<>();
-        getCreateUserRequest(user, departmentList);
-        // set headers
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(MediaType.APPLICATION_JSON);
-        // create request
-        ObjectMapper mapper = new ObjectMapper();
-        JsonNode jsonNodeObject = mapper.convertValue(user, JsonNode.class);
-        JsonNode root = mapper.createObjectNode();
-        ((ObjectNode) root).put("request", jsonNodeObject);
-        log.info("Create user Request - {}", root);
-        // make API call
-        ResponseEntity response = restTemplate.exchange(createUserUrl, HttpMethod.POST,
-                new HttpEntity<>(root, headers), String.class);
-        log.info("Create user Response - {}", response);
-        // validate response
-        if (response.getStatusCode() == HttpStatus.OK) {
-            ResponseEntity<String> getUsersResponse = getUserDetailsFromKeycloak(response, mapper);
-            if (getUsersResponse.getStatusCode() == HttpStatus.OK) {
-                String getUsersResponseBody = getUsersResponse.getBody();
-                JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
-                if(getUsersJsonNode.size() > 0) {
-                    JsonNode userContentData = getUsersJsonNode;
-                    User newUser = createUserWithApiResponse(userContentData);
-                    User savedUser = userRepository.save(newUser);
-                    // create user role mapping
-                    createUserRoleMapping(user, savedUser);
-                    // create user department mapping
-                    if(savedUser != null && savedUser.getId() > 0 && departmentList != null && !departmentList.isEmpty()) {
-                        org.upsmf.grievance.model.Department departmentMap = org.upsmf.grievance.model.Department.builder().departmentName(departmentList.get(0).name()).userId(savedUser.getId()).build();
-                        org.upsmf.grievance.model.Department userDepartment = departmentRepository.save(departmentMap);
-                        List<org.upsmf.grievance.model.Department> departments = new ArrayList<>();
-                        departments.add(userDepartment);
-                        savedUser.setDepartment(departments);
-                    }
-                    return new ResponseEntity<>(savedUser, HttpStatus.OK);
-                }
-                return ResponseEntity.internalServerError().build();
-            } else {
-                // Handle error cases here
-                return ResponseEntity.internalServerError().build();
-            }
-        }else{
-            response.getBody();
-            return ResponseEntity.internalServerError().build();
-        }
-    }*/
-
     @Override
     public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
         // check for department
@@ -164,8 +114,12 @@ public class IntegrationServiceImpl implements IntegrationService {
         log.info("Create user Response - {}", response);
         if (response.getStatusCode() == HttpStatus.OK) {
             String userContent = response.getBody().toString();
-
-
+            JsonNode responseNode = mapper.readTree(userContent);
+            if(responseNode != null){
+                if(responseNode.has("errorMessage")) {
+                    throw new RuntimeException(responseNode.get("errorMessage").textValue());
+                }
+            }
             ObjectNode requestNode = mapper.createObjectNode();
             requestNode.put("userName", userContent);
             JsonNode payload = requestNode;
