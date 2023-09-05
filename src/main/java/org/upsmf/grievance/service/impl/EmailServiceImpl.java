@@ -28,8 +28,10 @@ import javax.mail.MessagingException;
 import javax.mail.internet.MimeMessage;
 import java.io.File;
 import java.io.StringWriter;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
 
 // Annotation
 @Service
@@ -59,22 +61,32 @@ public class EmailServiceImpl implements EmailService {
 
     @Override
     public void sendCreateTicketMail(EmailDetails details, Ticket ticket) {
-        // Try block to check for exceptions
-        sendMailToRaiser(details, ticket);
-        sendMailToAdmin(details, ticket);
-        sendMailToNodalOfficer(details, ticket);
+        // sending mail activity in seperate thread
+        Runnable mailThread = () -> {   // lambda expression
+            sendMailToRaiser(details, ticket);
+            sendMailToAdmin(details, ticket);
+            sendMailToNodalOfficer(details, ticket);
+        };
+        new Thread(mailThread).start();
     }
 
     @Override
     public void sendUpdateTicketMail(EmailDetails details, Ticket ticket) {
         // Try block to check for exceptions
-        sendUpdateMailToRaiser(details, ticket);
+        Runnable mailThread = () -> {   // lambda expression
+            sendUpdateMailToRaiser(details, ticket);
+        };
+        new Thread(mailThread).start();
     }
 
     @Override
     public void sendClosedTicketMail(EmailDetails details, Ticket ticket, String comment, List<AssigneeTicketAttachment> attachments, String feedbackURL) {
         // Try block to check for exceptions
-        sendFeedbackMailToRaiser(details, ticket, comment, attachments, feedbackURL);
+        Runnable mailThread = () -> {   // lambda expression
+            sendFeedbackMailToRaiser(details, ticket, comment, attachments, feedbackURL);
+        };
+        new Thread(mailThread).start();
+
     }
 
 
