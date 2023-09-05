@@ -1,5 +1,6 @@
 package org.upsmf.grievance.service.impl;
 
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
@@ -114,7 +115,12 @@ public class IntegrationServiceImpl implements IntegrationService {
         log.info("Create user Response - {}", response);
         if (response.getStatusCode() == HttpStatus.OK) {
             String userContent = response.getBody().toString();
-            JsonNode responseNode = mapper.readTree(userContent);
+            JsonNode responseNode = null;
+            try {
+                responseNode = mapper.readTree(userContent);
+            }catch(JsonParseException jp) {
+                log.error("Error while parsing success response", jp);
+            }
             if(responseNode != null){
                 if(responseNode.has("errorMessage")) {
                     throw new RuntimeException(responseNode.get("errorMessage").textValue());
