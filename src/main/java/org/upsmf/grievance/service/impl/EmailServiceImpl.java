@@ -267,6 +267,46 @@ public class EmailServiceImpl implements EmailService {
         }
     }
 
+    private void sendMailToGrievanceNodal(EmailDetails details, Ticket ticket) {
+        try {
+            List<User> users = getUsersByDepartment(String.valueOf(-1));
+            if(users == null || users.isEmpty()) {
+                return;
+            }
+            users.stream().forEach(x -> {
+                 MimeMessagePreparator preparator = new MimeMessagePreparator() {
+                    public void prepare(MimeMessage mimeMessage) throws Exception {
+                        MimeMessageHelper message = new MimeMessageHelper(mimeMessage);
+                        message.setTo(x.getEmail());
+                        message.setSubject(details.getSubject());
+                        List<Department> departmentList = Department.getById(Integer.parseInt(ticket.getAssignedToId()));
+                        VelocityContext velocityContext = new VelocityContext();
+                        velocityContext.put("first_name", x.getFirstName());
+                        velocityContext.put("id", ticket.getId());
+                        velocityContext.put("created_date", DateUtil.getFormattedDateInString(ticket.getCreatedDate()));
+                        velocityContext.put("priority", ticket.getPriority());
+                        velocityContext.put("department", departmentList != null && !departmentList.isEmpty() ? departmentList.get(0).getCode() : "Others");
+                        velocityContext.put("status", ticket.getStatus().name());
+                        // signature
+                        createCommonMailSignature(velocityContext);
+                        // merge mail body
+                        StringWriter stringWriter = new StringWriter();
+                        velocityEngine.mergeTemplate("templates/admin_create_ticket.vm", "UTF-8", velocityContext, stringWriter);
+
+                        message.setText(stringWriter.toString(), true);
+                    }
+                };
+                // Sending the mail
+                javaMailSender.send(preparator);
+                log.info("create ticket mail Sent Successfully...");
+            });
+        }
+        // Catch block to handle the exceptions
+        catch (Exception e) {
+            log.error("Error while Sending Mail", e);
+        }
+    }
+
     private static void createCommonMailSignature(VelocityContext velocityContext) {
         velocityContext.put("signature_name", "U.P. State Medical Faculty");
         velocityContext.put("address", "Address: 5, Sarvpalli, Mall Avenue Road,  Lucknow - 226001 (U.P.) India");

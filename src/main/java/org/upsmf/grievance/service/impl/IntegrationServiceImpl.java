@@ -19,8 +19,6 @@ import org.springframework.http.converter.json.MappingJackson2HttpMessageConvert
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
-import org.springframework.util.LinkedMultiValueMap;
-import org.springframework.util.MultiValueMap;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
 import org.upsmf.grievance.dto.CreateUserDto;
@@ -38,6 +36,7 @@ import org.upsmf.grievance.repository.UserRepository;
 import org.upsmf.grievance.repository.UserRoleRepository;
 import org.upsmf.grievance.service.IntegrationService;
 
+import javax.transaction.Transactional;
 import java.util.*;
 
 @Service
@@ -265,6 +264,7 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
 
+    @Transactional
     @Override
     public ResponseEntity<String> updateUser(UpdateUserDto userDto) throws Exception {
         try {
@@ -277,6 +277,8 @@ public class IntegrationServiceImpl implements IntegrationService {
                 if (departmentList != null && !departmentList.isEmpty()) {
                     userDto.getAttributes().put("departmentName", departmentList.get(0).getCode());
                 }
+            } else {
+                userDto.getAttributes().put("departmentName", null);
             }
 
             JsonNode root = mapper.createObjectNode();
@@ -323,12 +325,14 @@ public class IntegrationServiceImpl implements IntegrationService {
             // updating user department mapping
             if (userDto.getAttributes() != null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("departmentName")) {
                 String departmentName = userDto.getAttributes().get("departmentName");
-                List<Department> departmentList = Department.getByCode(String.valueOf(departmentName));
-                if (departmentList != null && !departmentList.isEmpty()) {
-                    org.upsmf.grievance.model.Department userDepartment = departmentRepository.findByUserId(userDetails.getId());
-                    if (userDepartment != null) {
-                        userDepartment.setDepartmentName(departmentList.get(0).getCode());
-                        userDepartment = departmentRepository.save(userDepartment);
+                if(departmentName != null) {
+                    List<Department> departmentList = Department.getByCode(String.valueOf(departmentName));
+                    if (departmentList != null && !departmentList.isEmpty()) {
+                        org.upsmf.grievance.model.Department userDepartment = departmentRepository.findByUserId(userDetails.getId());
+                        if (userDepartment != null) {
+                            userDepartment.setDepartmentName(departmentList.get(0).getCode());
+                            userDepartment = departmentRepository.save(userDepartment);
+                        }
                     }
                 }
             }
