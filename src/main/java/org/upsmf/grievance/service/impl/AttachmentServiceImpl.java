@@ -6,6 +6,7 @@ import com.google.auth.oauth2.ServiceAccountCredentials;
 import com.google.cloud.storage.*;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.tika.Tika;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
@@ -57,6 +58,9 @@ public class AttachmentServiceImpl implements AttachmentService {
     @Value("${gcp.sub.folder.path}")
     private String subFolderPath;
 
+    @Autowired
+    private ObjectMapper mapper;
+
     @Override
     public ResponseEntity<String> uploadObject(MultipartFile file) {
         Path filePath = null;
@@ -81,7 +85,6 @@ public class AttachmentServiceImpl implements AttachmentService {
             URL url = blob.signUrl(30, TimeUnit.DAYS);
             log.info("URL - {}", url);
             String urlString = url.toURI().toString();
-            ObjectMapper mapper = new ObjectMapper();
             ObjectNode urlNode = mapper.createObjectNode();
             urlNode.put("url", urlString);
             ObjectNode node = mapper.createObjectNode();

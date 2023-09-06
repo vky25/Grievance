@@ -62,6 +62,9 @@ public class TicketServiceImpl implements TicketService {
     @Autowired
     private EmailService emailService;
 
+    @Autowired
+    private ObjectMapper mapper;
+
     /**
      *
      * @param ticket
@@ -281,8 +284,7 @@ public class TicketServiceImpl implements TicketService {
      */
     private org.upsmf.grievance.model.es.Ticket convertToESTicketObj(Ticket ticket) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DateUtil.DEFAULT_DATE_FORMAT);
-        ObjectMapper mapper = new ObjectMapper();
-        // TODO get user details based on ID
+        // get user details based on ID
         return org.upsmf.grievance.model.es.Ticket.builder()
                 .ticketId(ticket.getId())
                 .firstName(ticket.getFirstName())

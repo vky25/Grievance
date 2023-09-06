@@ -45,8 +45,9 @@ import java.util.*;
 public class IntegrationServiceImpl implements IntegrationService {
 
     public static final String ROLE = "Role";
+
     @Autowired
-    private  RestTemplate restTemplate;
+    private RestTemplate restTemplate;
 
     @Autowired
     private UserRepository userRepository;
@@ -56,17 +57,24 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Value("${api.user.updateUrl}")
     private String updateUserUrl;
+
     @Value("${api.user.searchUrl}")
     private String apiUrl;
+
     @Value("${api.user.listUrl}")
     private String listUserUrl;
+
     @Value("${api.user.activeUserUrl}")
     private String activeUserUrl;
 
     @Value("${api.user.deactivateUserUrl}")
     private String deactivateUserUrl;
+
     @Value("${api.user.loginUserUrl}")
     private String loginUserUrl;
+
+    @Autowired
+    private ObjectMapper mapper;
 
     @Autowired
     private UserRoleRepository userRoleRepository;
@@ -89,23 +97,22 @@ public class IntegrationServiceImpl implements IntegrationService {
     public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
         // check for department
         String module = user.getAttributes().get("module");
-        if(module != null) {
+        if (module != null) {
             user.getAttributes().put("module", module);
         } else {
             user.getAttributes().put("module", "grievance");
         }
         String departmentName = user.getAttributes().get("departmentName");
         List<Department> departmentList = new ArrayList<>();
-        if(departmentName != null) {
+        if (departmentName != null) {
             departmentList = Department.getById(Integer.valueOf(departmentName));
-            if(departmentList != null && !departmentList.isEmpty()) {
+            if (departmentList != null && !departmentList.isEmpty()) {
                 user.getAttributes().put("departmentName", departmentList.get(0).getCode());
             }
         }
         String generatePassword = validateAndCreateDefaultPassword(user);
         HttpHeaders headers = new HttpHeaders();
         headers.setContentType(MediaType.APPLICATION_JSON);
-        ObjectMapper mapper = new ObjectMapper();
         JsonNode jsonNodeObject = mapper.convertValue(user, JsonNode.class);
         JsonNode root = mapper.createObjectNode();
         ((ObjectNode) root).put("request", jsonNodeObject);
@@ -118,11 +125,11 @@ public class IntegrationServiceImpl implements IntegrationService {
             JsonNode responseNode = null;
             try {
                 responseNode = mapper.readTree(userContent);
-            }catch(JsonParseException jp) {
+            } catch (JsonParseException jp) {
                 log.error("Error while parsing success response", jp);
             }
-            if(responseNode != null){
-                if(responseNode.has("errorMessage")) {
+            if (responseNode != null) {
+                if (responseNode.has("errorMessage")) {
                     throw new RuntimeException(responseNode.get("errorMessage").textValue());
                 }
             }
@@ -132,19 +139,17 @@ public class IntegrationServiceImpl implements IntegrationService {
             JsonNode payloadRoot = mapper.createObjectNode();
             ((ObjectNode) payloadRoot).put("request", payload);
             ResponseEntity<String> getUsersResponse = searchUsers(payloadRoot);
-
             if (getUsersResponse.getStatusCode() == HttpStatus.OK) {
                 String getUsersResponseBody = getUsersResponse.getBody();
                 JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
-
-                if(getUsersJsonNode.size() > 0) {
+                if (getUsersJsonNode.size() > 0) {
                     JsonNode userContentData = getUsersJsonNode;
                     User newUser = createUserWithApiResponse(userContentData);
                     User savedUser = userRepository.save(newUser);
                     // create user role mapping
                     //createUserRoleMapping(user, savedUser);
                     // create user department mapping
-                    if(savedUser != null && savedUser.getId() > 0 && departmentList != null && !departmentList.isEmpty()) {
+                    if (savedUser != null && savedUser.getId() > 0 && departmentList != null && !departmentList.isEmpty()) {
                         org.upsmf.grievance.model.Department departmentMap = org.upsmf.grievance.model.Department.builder().departmentName(departmentList.get(0).getCode()).userId(savedUser.getId()).build();
                         org.upsmf.grievance.model.Department userDepartment = departmentRepository.save(departmentMap);
                         List<org.upsmf.grievance.model.Department> departments = new ArrayList<>();
@@ -156,30 +161,29 @@ public class IntegrationServiceImpl implements IntegrationService {
                     return new ResponseEntity<>(savedUser, HttpStatus.OK);
                 }
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
-            }
-            else {
+            } else {
                 // Handle error cases here
                 return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
             }
-        }else{
+        } else {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
         }
     }
 
     private String validateAndCreateDefaultPassword(CreateUserDto user) {
-        if(user != null) {
-            if(user.getCredentials() != null && !user.getCredentials().isEmpty()) {
+        if (user != null) {
+            if (user.getCredentials() != null && !user.getCredentials().isEmpty()) {
                 boolean autoCreate = true;
                 String existingPassword = null;
-                for(UserCredentials credentials : user.getCredentials()) {
-                    if(credentials.getType() != null && credentials.getType().equalsIgnoreCase("password")) {
-                        if(credentials.getValue() != null && !credentials.getValue().isBlank()) {
+                for (UserCredentials credentials : user.getCredentials()) {
+                    if (credentials.getType() != null && credentials.getType().equalsIgnoreCase("password")) {
+                        if (credentials.getValue() != null && !credentials.getValue().isBlank()) {
                             autoCreate = false;
                             existingPassword = credentials.getValue();
                         }
                     }
                 }
-                if(autoCreate) {
+                if (autoCreate) {
                     return generatePassword(user);
                 }
                 return existingPassword;
@@ -203,12 +207,10 @@ public class IntegrationServiceImpl implements IntegrationService {
         int rightLimit = 122; // letter 'z'
         int targetStringLength = 10;
         Random random = new Random();
-
         String generatedString = random.ints(leftLimit, rightLimit + 1)
                 .limit(targetStringLength)
                 .collect(StringBuilder::new, StringBuilder::appendCodePoint, StringBuilder::append)
                 .toString();
-
         log.debug("random password - {}", generatedString);
         return generatedString;
     }
@@ -216,9 +218,9 @@ public class IntegrationServiceImpl implements IntegrationService {
     private ResponseEntity<String> getUserDetailsFromKeycloak(ResponseEntity response, ObjectMapper mapper) throws Exception {
         String userContent = response.getBody().toString();
         // if error then error body will be sent
-        if(userContent.startsWith("{")) {
+        if (userContent.startsWith("{")) {
             JsonNode createUserResponseNode = mapper.readTree(userContent);
-            if(createUserResponseNode != null && createUserResponseNode.has("errorMessage")) {
+            if (createUserResponseNode != null && createUserResponseNode.has("errorMessage")) {
                 throw new RuntimeException("User exists with same username");
             }
         }
@@ -234,15 +236,15 @@ public class IntegrationServiceImpl implements IntegrationService {
     private static void getCreateUserRequest(CreateUserDto user, List<Department> departmentList) {
         // check for department
         String module = user.getAttributes().get("module");
-        if(module != null) {
+        if (module != null) {
             user.getAttributes().put("module", module);
         } else {
             user.getAttributes().put("module", "grievance");
         }
         String departmentId = user.getAttributes().get("departmentName");
-        if(departmentId != null) {
+        if (departmentId != null) {
             departmentList = Department.getById(Integer.valueOf(departmentId));
-            if(departmentList != null && !departmentList.isEmpty()) {
+            if (departmentList != null && !departmentList.isEmpty()) {
                 user.getAttributes().put("departmentName", departmentList.get(0).getCode());
             }
         }
@@ -250,11 +252,11 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
     private void createUserRoleMapping(CreateUserDto user, User savedUser) {
-        if(savedUser != null && savedUser.getId() > 0) {
+        if (savedUser != null && savedUser.getId() > 0) {
             String role = user.getAttributes().get(ROLE);
-            if(role != null && !role.isBlank()) {
+            if (role != null && !role.isBlank()) {
                 Role roleDetails = roleRepository.findByName(role);
-                if(roleDetails != null) {
+                if (roleDetails != null) {
                     UserRole userRole = UserRole.builder().userId(savedUser.getId()).roleId(roleDetails.getId()).build();
                     userRoleRepository.save(userRole);
                 }
@@ -270,13 +272,13 @@ public class IntegrationServiceImpl implements IntegrationService {
             headers.setContentType(MediaType.APPLICATION_JSON);
             String departmentName = userDto.getAttributes().get("departmentName");
             List<Department> departmentList = new ArrayList<>();
-            if(departmentName != null) {
+            if (departmentName != null) {
                 departmentList = Department.getById(Integer.valueOf(departmentName));
-                if(departmentList != null && !departmentList.isEmpty()) {
+                if (departmentList != null && !departmentList.isEmpty()) {
                     userDto.getAttributes().put("departmentName", departmentList.get(0).getCode());
                 }
             }
-            ObjectMapper mapper = new ObjectMapper();
+
             JsonNode root = mapper.createObjectNode();
             JsonNode jsonNodeObject = mapper.convertValue(userDto, JsonNode.class);
             ((ObjectNode) jsonNodeObject).remove("keycloakId");
@@ -287,31 +289,31 @@ public class IntegrationServiceImpl implements IntegrationService {
             // update postgres db
             updateUserData(userDto);
             return ResponseEntity.ok().body("User updated successful");
-        } catch(Exception e) {
+        } catch (Exception e) {
             throw new RuntimeException(e.getLocalizedMessage());
         }
     }
 
     private void updateUserData(UpdateUserDto userDto) {
         Optional<User> user = userRepository.findById(userDto.getId());
-        if(user.isPresent()) {
+        if (user.isPresent()) {
             User userDetails = user.get();
             int status = 0;
-            if(userDto.isEnabled()){
+            if (userDto.isEnabled()) {
                 status = 1;
             }
             userDetails.setFirstName(userDto.getFirstName());
             userDetails.setLastname(userDto.getLastName());
             userDetails.setEmail(userDto.getEmail());
             userDetails.setStatus(status);
-            if(userDto.getAttributes()!=null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("phoneNumber")) {
+            if (userDto.getAttributes() != null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("phoneNumber")) {
                 userDetails.setPhoneNumber(userDto.getAttributes().get("phoneNumber"));
             }
-            if(userDto.getAttributes()!=null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("Role")) {
+            if (userDto.getAttributes() != null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("Role")) {
                 String[] role = new String[1];
                 role[0] = userDto.getAttributes().get("Role");
                 userDetails.setRoles(role);
-                if(role[0].equalsIgnoreCase("SUPERADMIN")) {
+                if (role[0].equalsIgnoreCase("SUPERADMIN")) {
                     departmentRepository.deleteByUserId(userDetails.getId());
                 }
             }
@@ -319,12 +321,12 @@ public class IntegrationServiceImpl implements IntegrationService {
             userDetails = userRepository.save(userDetails);
 
             // updating user department mapping
-            if(userDto.getAttributes()!=null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("departmentName")) {
+            if (userDto.getAttributes() != null && !userDto.getAttributes().isEmpty() && userDto.getAttributes().containsKey("departmentName")) {
                 String departmentName = userDto.getAttributes().get("departmentName");
                 List<Department> departmentList = Department.getByCode(String.valueOf(departmentName));
-                if(departmentList != null && !departmentList.isEmpty()) {
+                if (departmentList != null && !departmentList.isEmpty()) {
                     org.upsmf.grievance.model.Department userDepartment = departmentRepository.findByUserId(userDetails.getId());
-                    if(userDepartment != null) {
+                    if (userDepartment != null) {
                         userDepartment.setDepartmentName(departmentList.get(0).getCode());
                         userDepartment = departmentRepository.save(userDepartment);
                     }
@@ -336,12 +338,12 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Override
     public ResponseEntity<String> getUsers(JsonNode payload) throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
+
         List<UserResponseDto> childNodes = new ArrayList<>();
-        Pageable pageable = PageRequest.of(payload.get("page").asInt(),payload.get("size").asInt(), Sort.by(Sort.Direction.DESC, "id"));
+        Pageable pageable = PageRequest.of(payload.get("page").asInt(), payload.get("size").asInt(), Sort.by(Sort.Direction.DESC, "id"));
         Page<User> users = userRepository.findAll(pageable);
-        if(users.hasContent()) {
-            for (User user : users.getContent()){
+        if (users.hasContent()) {
+            for (User user : users.getContent()) {
                 childNodes.add(createUserResponse(user));
             }
         }
@@ -365,7 +367,7 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
 
-    private User createUserWithApiResponse(JsonNode userContent)throws Exception{
+    private User createUserWithApiResponse(JsonNode userContent) throws Exception {
         String[] rolesArray = new String[0];
         String[] departmentArray = new String[0];
 
@@ -378,7 +380,7 @@ public class IntegrationServiceImpl implements IntegrationService {
             }
         }
 
-        if(userContent.path("attributes").has("departmentName") && departmentNode.isArray() && !departmentNode.isEmpty()) {
+        if (userContent.path("attributes").has("departmentName") && departmentNode.isArray() && !departmentNode.isEmpty()) {
             departmentArray = new String[departmentNode.size()];
             for (int i = 0; i < departmentNode.size(); i++) {
                 departmentArray[i] = departmentNode.get(i).asText();
@@ -401,28 +403,28 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Override
     public ResponseEntity<String> getUsersFromKeycloak(JsonNode payload) throws Exception {
-        ObjectMapper mapper = new ObjectMapper();
+
         List<UserResponseDto> childNodes = new ArrayList<>();
-        int i=0;
+        int i = 0;
         ResponseEntity<String> response = restTemplate.exchange(
                 listUserUrl,
                 HttpMethod.POST,
                 new HttpEntity<>(payload),
                 String.class
         );
-        if(response.getStatusCode() == HttpStatus.OK) {
+        if (response.getStatusCode() == HttpStatus.OK) {
             String getUsersResponseBody = response.getBody();
             ArrayNode getUsersJsonNode = (ArrayNode) mapper.readTree(getUsersResponseBody);
-            if(getUsersJsonNode.size() > 0) {
-               for(JsonNode node : getUsersJsonNode) {
-                   if(node.path("attributes") != null && !node.path("attributes").isEmpty()
-                           && node.path("attributes").path("module") != null && !node.path("attributes").path("module").isEmpty()
-                           && node.get("attributes").path("module").get(0).textValue().equalsIgnoreCase("grievance")) {
-                       log.info("Grievance user node found || {} -- {}",i++, node);
-                       User user = createUserWithApiResponse(node);
-                       childNodes.add(createUserResponse(user));
-                   }
-               }
+            if (getUsersJsonNode.size() > 0) {
+                for (JsonNode node : getUsersJsonNode) {
+                    if (node.path("attributes") != null && !node.path("attributes").isEmpty()
+                            && node.path("attributes").path("module") != null && !node.path("attributes").path("module").isEmpty()
+                            && node.get("attributes").path("module").get(0).textValue().equalsIgnoreCase("grievance")) {
+                        log.info("Grievance user node found || {} -- {}", i++, node);
+                        User user = createUserWithApiResponse(node);
+                        childNodes.add(createUserResponse(user));
+                    }
+                }
             }
         }
         JsonNode userResponse = mapper.createObjectNode();
@@ -447,7 +449,7 @@ public class IntegrationServiceImpl implements IntegrationService {
     @Override
     public ResponseEntity<UserResponseDto> getUserById(String id) throws RuntimeException {
         Optional<User> user = userRepository.findByKeycloakId(id);
-        if(user.isPresent()) {
+        if (user.isPresent()) {
             User userDetails = user.get();
             return new ResponseEntity<>(createUserResponse(userDetails), HttpStatus.OK);
         }
@@ -455,14 +457,14 @@ public class IntegrationServiceImpl implements IntegrationService {
     }
 
     @Override
-    public User activateUser(JsonNode payload) throws Exception{
+    public User activateUser(JsonNode payload) throws Exception {
         long id = payload.get("id").asLong(-1);
-        if(id > 0) {
+        if (id > 0) {
             Optional<User> user = userRepository.findById(id);
-            if(user.isPresent()){
+            if (user.isPresent()) {
                 User userDetails = user.get();
                 try {
-                    ObjectMapper mapper = new ObjectMapper();
+
                     ObjectNode request = mapper.createObjectNode();
                     ObjectNode root = mapper.createObjectNode();
                     root.put("userName", userDetails.getKeycloakId());
@@ -490,11 +492,11 @@ public class IntegrationServiceImpl implements IntegrationService {
     @Override
     public User deactivateUser(JsonNode payload) throws Exception {
         long id = payload.get("id").asLong(-1);
-        if(id > 0) {
+        if (id > 0) {
             Optional<User> user = userRepository.findById(id);
-            if(user.isPresent()){
+            if (user.isPresent()) {
                 User userDetails = user.get();
-                ObjectMapper mapper = new ObjectMapper();
+
                 ObjectNode request = mapper.createObjectNode();
                 ObjectNode root = mapper.createObjectNode();
                 root.put("userName", userDetails.getKeycloakId());
@@ -504,8 +506,8 @@ public class IntegrationServiceImpl implements IntegrationService {
                 try {
                     restTemplate.getMessageConverters().add(new MappingJackson2HttpMessageConverter());
                     ResponseEntity<String> response = restTemplate.exchange(
-                        deactivateUserUrl, HttpMethod.POST,
-                        new HttpEntity<>(request, headers), String.class);
+                            deactivateUserUrl, HttpMethod.POST,
+                            new HttpEntity<>(request, headers), String.class);
                     if (response.getStatusCode() == HttpStatus.OK) {
                         userDetails.setStatus(0);
                         return userRepository.save(userDetails);
@@ -531,29 +533,30 @@ public class IntegrationServiceImpl implements IntegrationService {
 
 
     /**
-     *  API to change password
-     *  sample body -
-     *  {
-     *     "credentials": [
-     *       {
-     *         "type": "password",
-     *         "value": "ka09eF$299",
-     *         "temporary": "false"
-     *       }
-     *     ]
-     *     }
+     * API to change password
+     * sample body -
+     * {
+     * "credentials": [
+     * {
+     * "type": "password",
+     * "value": "ka09eF$299",
+     * "temporary": "false"
      * }
+     * ]
+     * }
+     * }
+     *
      * @param userCredentials
      */
     public void changePassword(UserCredentials userCredentials) {
         // validate Request
         validateChangePasswordRequest(userCredentials);
-        ObjectMapper mapper = new ObjectMapper();
+
 
     }
 
     private void validateChangePasswordRequest(UserCredentials userCredentials) {
-        if(userCredentials == null) {
+        if (userCredentials == null) {
             throw new InvalidRequestException("Invalid Request");
         }
 
@@ -563,15 +566,15 @@ public class IntegrationServiceImpl implements IntegrationService {
         Map<String, List<String>> attributes = new HashMap<>();
         attributes.put("Role", Arrays.asList(body.getRoles()));
         List<String> department = new ArrayList<>();
-        if(body.getDepartment() != null && !body.getDepartment().isEmpty()) {
-            for(org.upsmf.grievance.model.Department depart : body.getDepartment()) {
+        if (body.getDepartment() != null && !body.getDepartment().isEmpty()) {
+            for (org.upsmf.grievance.model.Department depart : body.getDepartment()) {
                 department.add(depart.getDepartmentName());
             }
         }
         attributes.put("departmentName", department);
         attributes.put("phoneNumber", Arrays.asList(body.getPhoneNumber()));
         boolean enabled = false;
-        if(body.getStatus() == 1) {
+        if (body.getStatus() == 1) {
             enabled = true;
         }
         UserResponseDto userResponseDto = UserResponseDto.builder()
@@ -592,7 +595,7 @@ public class IntegrationServiceImpl implements IntegrationService {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
         message.setSubject("Grievance Account Details");
-        message.setText("Account is created for Grievance.\nPlease find the login credentials for your account.\n\nUsername: " + userName + " \nPassword: "+password);
+        message.setText("Account is created for Grievance.\nPlease find the login credentials for your account.\n\nUsername: " + userName + " \nPassword: " + password);
         mailSender.send(message);
     }
 

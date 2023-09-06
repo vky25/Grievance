@@ -23,6 +23,9 @@ public class OtpServiceImpl implements OtpService {
     @Autowired
     private JavaMailSender mailSender;
 
+    @Autowired
+    private ObjectMapper objectMapper;
+
     @Value("${otp.expiration.minutes}")
     private int otpExpirationMinutes;
 
@@ -67,7 +70,6 @@ public class OtpServiceImpl implements OtpService {
 
     private String toJson(Object obj) {
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.writeValueAsString(obj);
         } catch (JsonProcessingException e) {
             // Handle the exception
@@ -77,7 +79,6 @@ public class OtpServiceImpl implements OtpService {
 
     private <T> T fromJson(String json, Class<T> valueType) {
         try {
-            ObjectMapper objectMapper = new ObjectMapper();
             return objectMapper.readValue(json, valueType);
         } catch (JsonProcessingException e) {
             // Handle the exception
