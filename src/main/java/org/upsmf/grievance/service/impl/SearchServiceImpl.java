@@ -503,7 +503,7 @@ public class SearchServiceImpl implements SearchService {
             RegexpQueryBuilder phoneKeywordMatchQuery = QueryBuilders.regexpQuery("requester_phone", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             RegexpQueryBuilder emailKeywordMatchQuery = QueryBuilders.regexpQuery("requester_email", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             RegexpQueryBuilder escalatedDateKeywordMatchQuery = QueryBuilders.regexpQuery("escalated_date", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
-            RegexpQueryBuilder requesterTypeKeywordMatchQuery = QueryBuilders.regexpQuery("requester_type", ".*" + searchRequest.getSearchKeyword().toUpperCase() + ".*");
+            WildcardQueryBuilder requesterTypeKeywordMatchQuery = QueryBuilders.wildcardQuery("requester_type.keyword", "*"+searchRequest.getSearchKeyword().toUpperCase()+"*");
             RegexpQueryBuilder createdDateKeywordMatchQuery = QueryBuilders.regexpQuery("created_date", ".*" + searchRequest.getSearchKeyword().toLowerCase() + ".*");
             BoolQueryBuilder keywordSearchQuery = QueryBuilders.boolQuery();
             keywordSearchQuery.should(lastNameKeywordMatchQuery).should(escalatedDateKeywordMatchQuery).should(requesterTypeKeywordMatchQuery).should(createdDateKeywordMatchQuery);
