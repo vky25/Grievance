@@ -61,6 +61,9 @@ public class Ticket {
     @Column(name = "is_escalated")
     private boolean escalated;
 
+    @Column(name = "is_escalated_to_admin")
+    private boolean escalatedToAdmin;
+
     @Column(name = "escalated_date")
     private Timestamp escalatedDate;
 

@@ -4,6 +4,8 @@ import org.upsmf.grievance.model.Ticket;
 import org.upsmf.grievance.dto.TicketRequest;
 import org.upsmf.grievance.dto.UpdateTicketRequest;
 
+import javax.transaction.Transactional;
+
 public interface TicketService {
 
     Ticket save(Ticket ticket);
@@ -13,4 +15,7 @@ public interface TicketService {
     Ticket update(UpdateTicketRequest updateTicketRequest) throws Exception;
 
     Ticket getTicketById(long id);
+
+    @Transactional
+    void updateTicket(Long ticketId);
 }

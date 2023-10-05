@@ -1,6 +1,7 @@
 package org.upsmf.grievance.service.impl;
 
 import lombok.extern.slf4j.Slf4j;
+import org.apache.lucene.search.TotalHits;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchType;
 import org.elasticsearch.client.RequestOptions;
@@ -11,10 +12,12 @@ import org.elasticsearch.search.builder.SearchSourceBuilder;
 import org.elasticsearch.search.sort.SortOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.task.TaskExecutor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.scheduling.concurrent.ConcurrentTaskScheduler;
 import org.springframework.stereotype.Service;
 import org.upsmf.grievance.config.EsConfig;
 import org.upsmf.grievance.constants.Constants;
@@ -26,6 +29,7 @@ import org.upsmf.grievance.model.es.Ticket;
 import org.upsmf.grievance.model.reponse.TicketResponse;
 import org.upsmf.grievance.repository.es.TicketRepository;
 import org.upsmf.grievance.service.SearchService;
+import org.upsmf.grievance.service.TicketService;
 
 import java.io.IOException;
 import java.time.Instant;
@@ -44,6 +48,9 @@ public class SearchServiceImpl implements SearchService {
 
     @Value("${pending.15.days}")
     private long PENDING_15_DAYS;
+
+    @Value("${ticket.escalation.days}")
+    private long ticketEscalationDays;
 
     @Value("${affiliation}")
     private String AFFILIATION;
@@ -78,6 +85,9 @@ public class SearchServiceImpl implements SearchService {
     private TicketRepository esTicketRepository;
     @Autowired
     private EsConfig esConfig;
+
+    @Autowired
+    private TicketService ticketService;
 
     @Override
     public TicketResponse search(SearchRequest searchRequest) {
@@ -152,6 +162,56 @@ public class SearchServiceImpl implements SearchService {
             getfinalResponse(searchRequest, ASSESSMENT);
         }
         return finalResponse;
+    }
+
+    @Override
+    public long escalateTickets(Long lastUpdatedEpoch) {
+        BoolQueryBuilder finalQuery = createTicketEscalationQuery(lastUpdatedEpoch);
+        SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
+                .query(finalQuery);
+
+        SearchResponse searchResponse = getSearchResponseFromES(searchSourceBuilder);
+        if(searchResponse != null) {
+            TotalHits totalHits = searchResponse.getHits().getTotalHits();
+            if(totalHits != null && totalHits.value > 0) {
+                searchSourceBuilder = new SearchSourceBuilder()
+                        .query(finalQuery).size(Integer.parseInt(String.valueOf(totalHits.value)));
+                searchResponse = getSearchResponseFromES(searchSourceBuilder);
+                if(searchResponse != null && searchResponse.getHits()!= null
+                        && searchResponse.getHits().getTotalHits() != null
+                        && searchResponse.getHits().getTotalHits().value > 0) {
+                    escalatePendingTickets(searchResponse);
+                }
+            }
+        }
+        return searchResponse.getHits().getTotalHits().value;
+    }
+
+    private void escalatePendingTickets(SearchResponse searchResponse) {
+        Iterator<SearchHit> hits = searchResponse.getHits().iterator();
+        TaskExecutor taskExecutor = new ConcurrentTaskScheduler();
+        while(hits.hasNext()) {
+            Map<String, Object> searchHit = hits.next().getSourceAsMap();
+            taskExecutor.execute(new Runnable() {
+                @Override
+                public void run() {
+                    ticketService.updateTicket(Long.parseLong(searchHit.get("ticket_id").toString()));
+                }
+            });
+        }
+    }
+
+    private SearchResponse getSearchResponseFromES(SearchSourceBuilder searchSourceBuilder) {
+        SearchResponse searchResponse;
+        org.elasticsearch.action.search.SearchRequest search = new org.elasticsearch.action.search.SearchRequest("ticket");
+        search.searchType(SearchType.QUERY_THEN_FETCH);
+        search.source(searchSourceBuilder);
+        try {
+            searchResponse = esConfig.elasticsearchClient().search(search, RequestOptions.DEFAULT);
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+        return searchResponse;
     }
 
     private void getfinalResponse(SearchRequest searchRequest, String cc) {
@@ -259,14 +319,7 @@ public class SearchServiceImpl implements SearchService {
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                 .query(finalQuery);
 
-        org.elasticsearch.action.search.SearchRequest search = new org.elasticsearch.action.search.SearchRequest("ticket");
-        search.searchType(SearchType.QUERY_THEN_FETCH);
-        search.source(searchSourceBuilder);
-        try {
-            searchResponse = esConfig.elasticsearchClient().search(search, RequestOptions.DEFAULT);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
+        searchResponse = getSearchResponseFromES(searchSourceBuilder);
         return searchResponse;
     }
 
@@ -534,6 +587,18 @@ public class SearchServiceImpl implements SearchService {
         }
         getJunkQuery(searchRequest.getIsJunk(), finalQuery);
         getEsclatedTicketsQuery(searchRequest.getIsEscalated(), finalQuery);
+        return finalQuery;
+    }
+
+    private BoolQueryBuilder createTicketEscalationQuery(Long lastUpdatedEpoch) {
+        BoolQueryBuilder finalQuery = QueryBuilders.boolQuery();
+        // search query
+        RangeQueryBuilder createdDateKeywordMatchQuery = QueryBuilders.rangeQuery("updated_date_ts").lte(lastUpdatedEpoch);
+        MatchQueryBuilder escalatedMatchQuery = QueryBuilders.matchQuery("is_escalated", false);
+        MatchQueryBuilder statusMatchQuery = QueryBuilders.matchQuery("status", "OPEN");
+        BoolQueryBuilder keywordSearchQuery = QueryBuilders.boolQuery();
+        keywordSearchQuery.must(createdDateKeywordMatchQuery).must(escalatedMatchQuery).must(statusMatchQuery);
+        finalQuery.must(keywordSearchQuery);
         return finalQuery;
     }
 

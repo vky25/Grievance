@@ -2,6 +2,7 @@ package org.upsmf.grievance.service.impl;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.util.StringUtils;
+import lombok.Synchronized;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -26,6 +27,7 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
+import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
@@ -309,6 +311,7 @@ public class TicketServiceImpl implements TicketService {
                 .priority(ticket.getPriority())
                 .escalatedBy(ticket.getEscalatedBy())
                 .escalatedTo(ticket.getEscalatedTo())
+                .escalatedToAdmin(ticket.isEscalatedToAdmin())
                 .rating(Long.valueOf(0)).build();
     }
 
@@ -382,7 +385,26 @@ public class TicketServiceImpl implements TicketService {
         if (request.getPriority() == null || !isValidPriority(request.getPriority())) {
             throw new IllegalArgumentException("Invalid ticket priority");
         }
+    }
 
-
+    @Override
+    @Transactional
+    @Synchronized
+    public void updateTicket(Long ticketId) {
+        Ticket ticket = getTicketById(ticketId);
+        ticket.setUpdatedDate(new Timestamp(new Date().getTime()));
+        ticket.setEscalatedDate(new Timestamp(new Date().getTime()));
+        ticket.setEscalatedToAdmin(true);
+        ticketRepository.save(ticket);
+        ticket = getTicketById(ticket.getId());
+        // check if ticket exists in ES
+        Optional<org.upsmf.grievance.model.es.Ticket> esTicketDetails = esTicketRepository.findOneByTicketId(ticket.getId());
+        org.upsmf.grievance.model.es.Ticket updatedESTicket = convertToESTicketObj(ticket);
+        if(esTicketDetails.isPresent()) {
+            // TODO revisit this
+            esTicketRepository.deleteById(esTicketDetails.get().getId());
+            updatedESTicket.setRating(esTicketDetails.get().getRating());
+        }
+        org.upsmf.grievance.model.es.Ticket curentUpdatedTicket=esTicketRepository.save(updatedESTicket);
     }
 }

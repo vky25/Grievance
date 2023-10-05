@@ -7,6 +7,10 @@ import java.util.Map;
 
 public interface SearchService {
     TicketResponse search(SearchRequest searchRequest);
+
     Map<String, Object> searchTickets(SearchRequest searchRequest);
+
     Map<String, Object> dashboardReport(SearchRequest searchRequest);
+
+    long escalateTickets(Long epochTime);
 }

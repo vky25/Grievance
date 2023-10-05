@@ -57,4 +57,12 @@ public class NightlyJobScheduler {
             emailService.sendSimpleMail(emailDetails);
         }
     }
+
+    @Scheduled(cron = "0 0 4 * * ?")
+    public void escalateTickets(){
+        log.info("Starting the escalation job");
+        long lastUpdateTimeBeforeEscalation = LocalDateTime.now().minusDays(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        long response = searchService.escalateTickets(lastUpdateTimeBeforeEscalation);
+        log.info("No of tickets escalated "+response);
+    }
 }
