@@ -395,6 +395,7 @@ public class TicketServiceImpl implements TicketService {
         ticket.setUpdatedDate(new Timestamp(new Date().getTime()));
         ticket.setEscalatedDate(new Timestamp(new Date().getTime()));
         ticket.setEscalatedToAdmin(true);
+        ticket.setPriority(TicketPriority.MEDIUM);
         ticketRepository.save(ticket);
         ticket = getTicketById(ticket.getId());
         // check if ticket exists in ES
