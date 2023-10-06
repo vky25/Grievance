@@ -36,6 +36,9 @@ public class NightlyJobScheduler {
     @Value("${subject.daily.report}")
     private String subject;
 
+    @Value("${ticket.escalation.days}")
+    private String adminEscalationDays;
+
     @Scheduled(cron = "0 1 0 * * ?")
     public void runNightlyJob(){
         log.info("Starting the Nightly job");
@@ -61,7 +64,7 @@ public class NightlyJobScheduler {
     @Scheduled(cron = "0 0 4 * * ?")
     public void escalateTickets(){
         log.info("Starting the escalation job");
-        long lastUpdateTimeBeforeEscalation = LocalDateTime.now().minusDays(1).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        long lastUpdateTimeBeforeEscalation = LocalDateTime.now().minusDays(Integer.parseInt(adminEscalationDays)).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
         long response = searchService.escalateTickets(lastUpdateTimeBeforeEscalation);
         log.info("No of tickets escalated "+response);
     }
