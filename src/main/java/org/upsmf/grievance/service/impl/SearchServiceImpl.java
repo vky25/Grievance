@@ -312,7 +312,7 @@ public class SearchServiceImpl implements SearchService {
             finalQuery = getStatusQuery(list, finalQuery);
             finalQuery = getJunkQuery(false, finalQuery);
         } else if (reportType.equals("isEscalated")) {
-            finalQuery = getEsclatedTicketsQuery(true, finalQuery);
+            finalQuery = getEscalatedTicketsQuery(true, finalQuery);
         } else if (reportType.equals("highPriority")) {
             finalQuery = getPriority("HIGH", finalQuery);
         }
@@ -544,6 +544,9 @@ public class SearchServiceImpl implements SearchService {
                 longValue = ((Number) entry.getValue()).longValue();
                 esTicket.setRating(longValue);
                 break;
+            case "is_escalated_to_admin":
+                esTicket.setEscalatedToAdmin(((Boolean) entry.getValue()).booleanValue());
+                break;
         }
     }
 
@@ -586,7 +589,7 @@ public class SearchServiceImpl implements SearchService {
             getStatusQuery((List<String>) searchRequest.getFilter().get("status"), finalQuery);
         }
         getJunkQuery(searchRequest.getIsJunk(), finalQuery);
-        getEsclatedTicketsQuery(searchRequest.getIsEscalated(), finalQuery);
+        getEscalatedTicketsQuery(searchRequest.getIsEscalated(), finalQuery);
         return finalQuery;
     }
 
@@ -642,12 +645,12 @@ public class SearchServiceImpl implements SearchService {
         return finalQuery;
     }
 
-    private BoolQueryBuilder getEsclatedTicketsQuery(Boolean isEscalated, BoolQueryBuilder finalQuery) {
+    private BoolQueryBuilder getEscalatedTicketsQuery(Boolean isEscalated, BoolQueryBuilder finalQuery) {
         if (isEscalated != null) {
-            MatchQueryBuilder esclatedMatchQuery = QueryBuilders.matchQuery("is_escalated", isEscalated);
-            BoolQueryBuilder esclatedSearchQuery = QueryBuilders.boolQuery();
-            esclatedSearchQuery.must(esclatedMatchQuery);
-            finalQuery.must(esclatedSearchQuery);
+            MatchQueryBuilder escalatedMatchQuery = QueryBuilders.matchQuery("is_escalated_to_admin", isEscalated);
+            BoolQueryBuilder escalatedSearchQuery = QueryBuilders.boolQuery();
+            escalatedSearchQuery.must(escalatedMatchQuery);
+            finalQuery.must(escalatedSearchQuery);
         }
         return finalQuery;
     }
