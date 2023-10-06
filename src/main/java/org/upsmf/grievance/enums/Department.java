@@ -6,7 +6,7 @@ import java.util.stream.Collectors;
 
 public enum Department {
 
-    REGISTRATION(1, "Registration"), AFFILIATION(2, "Affiliation"), ASSESSMENT(3, "Assessment"), HALL_TICKET(4, "Hall Ticket"), OTHERS(-1, "Others");
+    REGISTRATION(1, "Registration"), AFFILIATION(2, "Affiliation"), ASSESSMENT(3, "Assessment"), EXAMS(4, "Exams"), OTHERS(-1, "Others");
 
     private int id;
     private String code;
