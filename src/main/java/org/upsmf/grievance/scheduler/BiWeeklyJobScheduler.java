@@ -36,7 +36,7 @@ public class BiWeeklyJobScheduler {
     @Value("${subject.bi.weekly.report}")
     private String subject;
 
-    @Scheduled(cron = "0 1 0 */14 * ?")
+    @Scheduled(cron = "0 1 0 * * ?")
     public void runBiWeeklyJob(){
         log.info("Starting the Bi Weekly job");
         SearchRequest searchRequest = new SearchRequest();
