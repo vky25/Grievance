@@ -1,5 +1,6 @@
 package org.upsmf.grievance.service;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import org.upsmf.grievance.model.AssigneeTicketAttachment;
 import org.upsmf.grievance.model.EmailDetails;
 import org.upsmf.grievance.model.Ticket;
@@ -21,4 +22,6 @@ public interface EmailService {
     // Method
     // To send an email with attachment
     void sendMailWithAttachment(EmailDetails details);
+
+    void sendMailToDGME(EmailDetails details, JsonNode assessmentMatrix);
 }

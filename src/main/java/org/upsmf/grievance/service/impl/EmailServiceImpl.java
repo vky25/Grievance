@@ -2,6 +2,7 @@ package org.upsmf.grievance.service.impl;
 
 // Importing required classes
 
+import com.fasterxml.jackson.databind.JsonNode;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.velocity.VelocityContext;
 import org.apache.velocity.app.VelocityEngine;
@@ -397,6 +398,41 @@ public class EmailServiceImpl implements EmailService {
         catch (MessagingException e) {
             // Display message when exception occurred
             log.error("Error while Sending Mail with attachment", e);
+        }
+    }
+
+    @Override
+    public void sendMailToDGME(EmailDetails details, JsonNode assessmentMatrix) {
+        try {
+            MimeMessagePreparator preparator = new MimeMessagePreparator() {
+                public void prepare(MimeMessage mimeMessage) throws Exception {
+                    MimeMessageHelper message = new MimeMessageHelper(mimeMessage);
+                    message.setTo(details.getRecipient());
+                    message.setSubject(details.getSubject());
+
+                    VelocityContext velocityContext = new VelocityContext();
+                    velocityContext.put("unassigned", assessmentMatrix.get("unassigned").numberValue());
+                    velocityContext.put("open", assessmentMatrix.get("isOpen").numberValue());
+                    velocityContext.put("closed", assessmentMatrix.get("isClosed").numberValue());
+                    velocityContext.put("escalated", assessmentMatrix.get("isEscalated").numberValue());
+                    velocityContext.put("junk", assessmentMatrix.get("isJunk").numberValue());
+                    velocityContext.put("total", assessmentMatrix.get("total").numberValue());
+                    // signature
+                    createCommonMailSignature(velocityContext);
+                    // merge mail body
+                    StringWriter stringWriter = new StringWriter();
+                    velocityEngine.mergeTemplate("templates/biweekly_report.vm", "UTF-8", velocityContext, stringWriter);
+
+                    message.setText(stringWriter.toString(), true);
+                }
+            };
+            // Sending the mail
+            javaMailSender.send(preparator);
+            log.info("create ticket mail Sent Successfully...");
+        }
+        // Catch block to handle the exceptions
+        catch (Exception e) {
+            log.error("Error while Sending Mail", e);
         }
     }
 }

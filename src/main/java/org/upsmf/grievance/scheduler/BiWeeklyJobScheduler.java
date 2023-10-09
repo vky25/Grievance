@@ -49,12 +49,12 @@ public class BiWeeklyJobScheduler {
         JsonNode jsonNode = objectMapper.valueToTree(response);
         JsonNode assessmentMatrix = jsonNode.get(Constants.ASSESSMENT_MATRIX);
         log.info("Json node "+assessmentMatrix.toString());
-        EmailDetails emailDetails = new EmailDetails();
+        EmailDetails emailDetails = null;
         for (int i=0;i<emailIds.size();i++){
-            emailDetails.builder().recipient(emailIds.get(i)).msgBody(assessmentMatrix.toString())
-                    .subject(subject);
+            emailDetails = emailDetails.builder().recipient(emailIds.get(i)).msgBody(assessmentMatrix.toString())
+                    .subject(subject).build();
             log.info("Details "+emailIds.get(i) + " "+response.get(Constants.ASSESSMENT_MATRIX)+ " "+ subject);
-            emailService.sendSimpleMail(emailDetails);
+            emailService.sendMailToDGME(emailDetails, assessmentMatrix);
         }
     }
 }
