@@ -16,7 +16,7 @@ public interface EmailService {
     void sendUpdateTicketMail(EmailDetails details, Ticket ticket);
 
     void sendClosedTicketMail(EmailDetails details, Ticket ticket, String comment, List<AssigneeTicketAttachment> attachments, String feedbackURL);
-
+    void sendJunkMail(EmailDetails details, Ticket ticket, String comment, List<AssigneeTicketAttachment> attachments, String feedbackURL);
     void sendSimpleMail(EmailDetails details);
 
     // Method

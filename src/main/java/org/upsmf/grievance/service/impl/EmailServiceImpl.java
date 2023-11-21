@@ -89,8 +89,15 @@ public class EmailServiceImpl implements EmailService {
         new Thread(mailThread).start();
 
     }
+    @Override
+    public void sendJunkMail(EmailDetails details, Ticket ticket, String comment, List<AssigneeTicketAttachment> attachments, String feedbackURL) {
+        // Try block to check for exceptions
+        Runnable mailThread = () -> {   // lambda expression
+            sendJunkResponseToRaiser(details, ticket, comment, attachments, feedbackURL);
+        };
+        new Thread(mailThread).start();
 
-
+    }
     private void sendFeedbackMailToRaiser(EmailDetails details, Ticket ticket,
                                          String comment, List<AssigneeTicketAttachment> attachments,
                                          String feedbackUrl) {
@@ -115,6 +122,43 @@ public class EmailServiceImpl implements EmailService {
                     // merge mail body
                     StringWriter stringWriter = new StringWriter();
                     velocityEngine.mergeTemplate("templates/raiser_feedback.vm", "UTF-8", velocityContext, stringWriter);
+
+                    message.setText(stringWriter.toString(), true);
+                }
+            };
+            // Sending the mail
+            javaMailSender.send(preparator);
+            log.info("create ticket mail Sent Successfully...");
+        }
+        // Catch block to handle the exceptions
+        catch (Exception e) {
+            log.error("Error while Sending Mail", e);
+        }
+    }
+    private void sendJunkResponseToRaiser(EmailDetails details, Ticket ticket,
+                                          String comment, List<AssigneeTicketAttachment> attachments,
+                                          String feedbackUrl) {
+        try {
+            MimeMessagePreparator preparator = new MimeMessagePreparator() {
+                public void prepare(MimeMessage mimeMessage) throws Exception {
+                    MimeMessageHelper message = new MimeMessageHelper(mimeMessage);
+                    message.setTo(details.getRecipient());
+                    message.setSubject(details.getSubject());
+
+                    List<Department> departmentList = Department.getById(Integer.parseInt(ticket.getAssignedToId()));
+                    VelocityContext velocityContext = new VelocityContext();
+                    velocityContext.put("first_name", ticket.getFirstName());
+                    velocityContext.put("id", ticket.getId());
+                    velocityContext.put("created_date", DateUtil.getFormattedDateInString(ticket.getCreatedDate()));
+                    velocityContext.put("department", departmentList!=null&&!departmentList.isEmpty()?departmentList.get(0).getCode():"Others");
+                    velocityContext.put("comment", comment);
+                    velocityContext.put("url", feedbackUrl);
+
+                    // signature
+                    createCommonMailSignature(velocityContext);
+                    // merge mail body
+                    StringWriter stringWriter = new StringWriter();
+                    velocityEngine.mergeTemplate("templates/raiser_junk_ticket.vm", "UTF-8", velocityContext, stringWriter);
 
                     message.setText(stringWriter.toString(), true);
                 }
