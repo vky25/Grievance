@@ -202,10 +202,15 @@ public class TicketServiceImpl implements TicketService {
         if(curentUpdatedTicket.getStatus().name().equalsIgnoreCase(TicketStatus.CLOSED.name())) {
             generateFeedbackLinkAndEmail(ticket);
             return ticket;
+        } else if (curentUpdatedTicket.getStatus().name().equalsIgnoreCase(TicketStatus.INVALID.name())) {
+            EmailDetails resolutionOfYourGrievance = EmailDetails.builder().subject("Update on Ticket Status - " +curentUpdatedTicket.getTicketId()).recipient(curentUpdatedTicket.getEmail()).build();
+            emailService.sendUpdateTicketMail(resolutionOfYourGrievance, ticket);
+            return ticket;
+        }else {
+            EmailDetails resolutionOfYourGrievance = EmailDetails.builder().subject("Resolution of Your Grievance - " + curentUpdatedTicket.getTicketId()).recipient(curentUpdatedTicket.getEmail()).build();
+            emailService.sendUpdateTicketMail(resolutionOfYourGrievance, ticket);
+            return ticket;
         }
-        EmailDetails resolutionOfYourGrievance = EmailDetails.builder().subject("Update on Ticket Status - " +curentUpdatedTicket.getTicketId()).recipient(curentUpdatedTicket.getEmail()).build();
-        emailService.sendUpdateTicketMail(resolutionOfYourGrievance, ticket);
-        return ticket;
     }
 
     private void generateFeedbackLinkAndEmail(Ticket curentUpdatedTicket) {
@@ -225,6 +230,23 @@ public class TicketServiceImpl implements TicketService {
         EmailDetails resolutionOfYourGrievance = EmailDetails.builder().subject("Resolution of Your Grievance").recipient(curentUpdatedTicket.getEmail()).build();
         emailService.sendClosedTicketMail(resolutionOfYourGrievance, curentUpdatedTicket, comment, Collections.EMPTY_LIST, link);
     }
+//    private void generateFeedbackLinkAndEmail(Ticket curentUpdatedTicket) {
+//        List<Comments> comments = commentRepository.findAllByTicketId(curentUpdatedTicket.getId());
+//        Comments latestComment =null;
+//        if(comments!=null && comments.size() > 0) {
+//            latestComment = comments.get(comments.size()-1);
+//        }
+//        String comment = latestComment!=null?latestComment.getComment():"";
+//        String link = feedbackBaseUrl.concat("?").concat("guestName=")
+//                .concat(curentUpdatedTicket.getFirstName().concat("%20").concat(curentUpdatedTicket.getLastName()))
+//                .concat("&ticketId=").concat(String.valueOf(curentUpdatedTicket.getId()))
+//                .concat("&resolutionComment=").concat(comment)
+//                .concat("&email=").concat(curentUpdatedTicket.getEmail())
+//                .concat("&phone=").concat(curentUpdatedTicket.getPhone())
+//                .concat("&ticketTitle=").concat(curentUpdatedTicket.getDescription());
+//        EmailDetails resolutionOfYourGrievance = EmailDetails.builder().subject("Resolution of Your Grievance").recipient(curentUpdatedTicket.getEmail()).build();
+//        emailService.sendClosedTicketMail(resolutionOfYourGrievance, curentUpdatedTicket, comment, Collections.EMPTY_LIST, link);
+//    }
 
     @Override
     public Ticket getTicketById(long id) {
@@ -366,7 +388,7 @@ public class TicketServiceImpl implements TicketService {
     }
 
     private boolean isValidStatus(TicketStatus status) {
-        return status == TicketStatus.OPEN ||  status==TicketStatus.CLOSED;
+        return status == TicketStatus.OPEN ||  status==TicketStatus.CLOSED || status==TicketStatus.INVALID;
     }
 
     private boolean isValidPriority(TicketPriority priority) {
