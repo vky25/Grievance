@@ -30,9 +30,11 @@ import org.upsmf.grievance.model.reponse.TicketResponse;
 import org.upsmf.grievance.repository.es.TicketRepository;
 import org.upsmf.grievance.service.SearchService;
 import org.upsmf.grievance.service.TicketService;
+import org.upsmf.grievance.util.DateUtil;
 
 import java.io.IOException;
 import java.time.Instant;
+import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -489,10 +491,10 @@ public class SearchServiceImpl implements SearchService {
                 esTicket.setJunk((Boolean) entry.getValue());
                 break;
             case "created_date":
-                esTicket.setCreatedDate((String) entry.getValue());
+                esTicket.setCreatedDate(String.valueOf(LocalDateTime.parse((String) entry.getValue())));
                 break;
             case "updated_date":
-                esTicket.setUpdatedDate((String) entry.getValue());
+                esTicket.setUpdatedDate(String.valueOf(LocalDateTime.parse((String) entry.getValue())));
                 break;
             case "created_date_ts":
                 longValue = ((Number) entry.getValue()).longValue();

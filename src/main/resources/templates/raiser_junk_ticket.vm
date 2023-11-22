@@ -85,18 +85,20 @@
                                                                                     <td align="justify" class="esd-block-text es-m-txt-l">
                                                                                         <p></br></p>
                                                                                         <p>Dear ${first_name},</p>
-                                                                                        <p>We hope this email finds you well. We are writing to provide you with an update regarding your recent ticket with us, ${id}.</p>
-                                                                                        <p>We are pleased to inform you that significant progress has been made in resolving the issue you reported. Our dedicated team has been diligently working on your case, and we are confident that we are moving towards a resolution.</p>
-                                                                                        <p>
-                                                                                            <div>Here is a brief overview of the status:</div>
-                                                                                            <div>Grievance ID: <strong>${id}</strong></div>
-                                                                                            <div>Date of Registration: <strong>${created_date}</strong></div>
-                                                                                            <div>Current Status: <strong>${status}</strong></div>
-                                                                                            <div>Date of Last Update: <strong>${updated_date}</strong></div>
-                                                                                        </p>
-                                                                                        <p>Our support team is continuously monitoring the situation to ensure that all necessary steps are taken to address your concerns effectively and efficiently. Rest assured; we are committed to providing you with the best possible resolution.</p>
-                                                                                        <p>If you have any additional information or updates that could be helpful for our team to better understand your issue, please feel free to share it with us. Your input is valuable and can contribute to a swifter resolution.</p>
-                                                                                        <p>We will keep you updated on any further developments regarding your ticket.</p>
+                                                                                        <p>I hope this message finds you well. We wanted to bring to your attention that your recent grievance ticket: ${id}, has been marked as "junk" due to insufficient information provided. Our goal is to provide you with the best possible assistance, and to ensure a prompt resolution, we kindly request that you raise the ticket again with the necessary details.</p>
+
+                                                                                        <p>To help us better understand and address your concern, please provide the following information:<br>
+                                                                                        1. Detailed description of the issue or complaint.<br>
+
+2. Any relevant screenshots or attachments that may assist us in troubleshooting.<br>
+
+3. Your account information, including any relevant usernames or account IDs.
+                                                                                  </p>
+<p>Please be assured that your satisfaction is our top priority, and we apologize for any inconvenience this may have caused. Your prompt response will enable us to expedite the resolution process and provide you with the support you deserve.</p>
+<p>If you have any questions or concerns, please feel free to reply to this email or contact our support team directly at <b>${support_email_address}</b> or <b>${support_phone_number}</b>.</p>
+<p>Thank you for your understanding and cooperation.</p>
+                                                                                        <p>We want to assure you that we take all grievances seriously and are committed to ensuring a positive resolution. Your feedback is invaluable to us, if the problem is solved to your satisfaction, please spare few seconds to let us know about your support experience by participating in the rating below.</p>
+                                                                                        <p><a href="${url}"><img src="https://storage.googleapis.com/dev-public-upsmf/grievance/Picture%201.png" alt="feedback_link" width="400px"></a></p>
                                                                                     </td>
                                                                                 </tr>
                                                                                 <tr></tr>

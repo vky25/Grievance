@@ -24,7 +24,7 @@ public class TicketController {
     private AttachmentService attachmentService;
 
     @PostMapping("/save")
-    public ResponseEntity<Response> save(@RequestBody TicketRequest ticketRequest) {
+    public ResponseEntity<Ticket> save(@RequestBody TicketRequest ticketRequest) {
         Ticket responseTicket = null;
         try {
             responseTicket = ticketService.save(ticketRequest);
@@ -33,7 +33,7 @@ public class TicketController {
             throw new RuntimeException(e.getMessage());
         }
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
-        return new ResponseEntity<Response>(response, HttpStatus.OK);
+        return new ResponseEntity<>(responseTicket, HttpStatus.OK);
     }
 
     @PostMapping("/update")

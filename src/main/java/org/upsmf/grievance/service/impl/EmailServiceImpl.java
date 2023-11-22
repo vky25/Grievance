@@ -152,6 +152,8 @@ public class EmailServiceImpl implements EmailService {
                     velocityContext.put("created_date", DateUtil.getFormattedDateInString(ticket.getCreatedDate()));
                     velocityContext.put("department", departmentList!=null&&!departmentList.isEmpty()?departmentList.get(0).getCode():"Others");
                     velocityContext.put("comment", comment);
+                    velocityContext.put("support_email_address","upmedicalfaculty@upsmfac.org");
+                    velocityContext.put("support_phone_number","Phone: (0522) 2238846, 2235964, 2235965, 3302100");
                     velocityContext.put("url", feedbackUrl);
 
                     // signature

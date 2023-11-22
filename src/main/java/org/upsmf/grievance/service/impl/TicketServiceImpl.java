@@ -23,7 +23,9 @@ import org.upsmf.grievance.util.DateUtil;
 
 import javax.transaction.Transactional;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -90,6 +92,8 @@ public class TicketServiceImpl implements TicketService {
         org.upsmf.grievance.model.es.Ticket esticket = convertToESTicketObj(ticket);
         // save ticket in ES
         esTicketRepository.save(esticket);
+        System.out.println(esticket);
+        System.out.println(psqlTicket);
         return psqlTicket;
     }
 
@@ -127,8 +131,9 @@ public class TicketServiceImpl implements TicketService {
         // create ticket
         ticket = saveWithAttachment(ticket, ticketRequest.getAttachmentUrls());
         // send mail
-        EmailDetails emailDetails = EmailDetails.builder().recipient(ticket.getEmail()).subject("New Complaint Registration").build();
-        emailService.sendCreateTicketMail(emailDetails, ticket);
+        //EmailDetails emailDetails = EmailDetails.builder().recipient(ticket.getEmail()).subject("New Complaint Registration").build();
+        //emailService.sendCreateTicketMail(emailDetails, ticket);
+        System.out.println(ticket);
         return ticket;
     }
 
@@ -139,10 +144,11 @@ public class TicketServiceImpl implements TicketService {
      * @throws Exception
      */
     private Ticket createTicketWithDefault(TicketRequest ticketRequest) throws Exception {
+
         Timestamp currentTimestamp = new Timestamp(DateUtil.getCurrentDate().getTime());
-        LocalDateTime escalationDateTime = LocalDateTime.now().plus(Long.valueOf(ticketEscalationDays), ChronoUnit.DAYS);
+        LocalDateTime escalationDateTime = LocalDateTime.now().plusDays(Long.parseLong(ticketEscalationDays));
         return Ticket.builder()
-                .createdDate(new Timestamp(DateUtil.getCurrentDate().getTime()))
+                .createdDate(currentTimestamp)
                 .firstName(ticketRequest.getFirstName())
                 .lastName(ticketRequest.getLastName())
                 .phone(ticketRequest.getPhone())
@@ -150,9 +156,8 @@ public class TicketServiceImpl implements TicketService {
                 .requesterType(ticketRequest.getUserType())
                 .assignedToId(ticketRequest.getCc())
                 .description(ticketRequest.getDescription())
-                .createdDate(currentTimestamp)
                 .updatedDate(currentTimestamp)
-                .lastUpdatedBy("-1")
+                .lastUpdatedBy("-1")//need to get user details and add id or name
                 .escalated(false)
                 .escalatedDate(Timestamp.valueOf(escalationDateTime))
                 .escalatedTo("-1")
@@ -306,6 +311,8 @@ public class TicketServiceImpl implements TicketService {
      */
     private org.upsmf.grievance.model.es.Ticket convertToESTicketObj(Ticket ticket) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DateUtil.DEFAULT_DATE_FORMAT);
+        DateTimeFormatter dateTimeFormatterIST = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+                .withZone(ZoneId.of("Asia/Kolkata"));
         // get user details based on ID
         return org.upsmf.grievance.model.es.Ticket.builder()
                 .ticketId(ticket.getId())
@@ -318,13 +325,13 @@ public class TicketServiceImpl implements TicketService {
                 .assignedToName("") // get user details based on ID
                 .description(ticket.getDescription())
                 .junk(ticket.isJunk())
-                .createdDate(ticket.getCreatedDate().toLocalDateTime().format(dateTimeFormatter))
+                .createdDate(DateUtil.convertToIST(ticket.getCreatedDate()))
                 .createdDateTS(ticket.getCreatedDate().getTime())
-                .updatedDate(ticket.getUpdatedDate().toLocalDateTime().format(dateTimeFormatter))
+                .updatedDate(DateUtil.convertToIST(ticket.getUpdatedDate()))
                 .updatedDateTS(ticket.getUpdatedDate().getTime())
                 .lastUpdatedBy(ticket.getLastUpdatedBy())
                 .escalated(ticket.isEscalated())
-                .escalatedDate(ticket.getEscalatedDate()!=null?ticket.getEscalatedDate().toLocalDateTime().format(dateTimeFormatter):null)
+                .escalatedDate(ticket.getEscalatedDate() != null ? DateUtil.convertToIST(ticket.getEscalatedDate()) : null)
                 .escalatedDateTS(ticket.getEscalatedDate()!=null?ticket.getEscalatedDate().getTime():-1)
                 .status(ticket.getStatus())
                 .requestType(ticket.getRequestType())
