@@ -6,6 +6,7 @@ import org.springframework.http.ResponseEntity;
 import org.upsmf.grievance.dto.CreateUserDto;
 import org.upsmf.grievance.dto.UpdateUserDto;
 import org.upsmf.grievance.dto.UserResponseDto;
+import org.upsmf.grievance.model.OtpRequest;
 import org.upsmf.grievance.model.User;
 
 public interface IntegrationService {
@@ -30,4 +31,6 @@ public interface IntegrationService {
     User deactivateUser(JsonNode payload) throws Exception;
 
     ResponseEntity<String> login(JsonNode body);
+
+    Boolean sendMobileOTP(String name, String phoneNumber, String otp);
 }

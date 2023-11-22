@@ -12,4 +12,5 @@ public class OtpValidationRequest {
 
     private String email;
     private String otp;
+    private String phone;
 }

@@ -23,5 +23,6 @@ public class TicketRequest {
     private String description;
     private List<String> attachmentUrls;
     private String otp;
+    private String mobileOtp;
 
 }

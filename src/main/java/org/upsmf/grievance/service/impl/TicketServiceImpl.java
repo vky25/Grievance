@@ -120,7 +120,13 @@ public class TicketServiceImpl implements TicketService {
         // validate OTP
         boolean isValid = otpService.validateOtp(ticketRequest.getEmail(), ticketRequest.getOtp());
         if(!isValid) {
-            throw new RuntimeException("Bad Request");
+            throw new RuntimeException("Invalid mail OTP");
+        } else {
+            boolean isMobileOtpValid = otpService.validateMobileOtp(ticketRequest.getPhone(), ticketRequest.getMobileOtp());
+
+            if (!isMobileOtpValid) {
+                throw new RuntimeException("Invalid mail OTP");
+            }
         }
         // set default value for creating ticket
         Ticket ticket = createTicketWithDefault(ticketRequest);

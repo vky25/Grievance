@@ -9,4 +9,8 @@ public interface OtpService {
     String generateAndSendOtp(OtpRequest otpRequest);
     boolean validateOtp(String email, String otp);
     void sendGenericEmail(String email, String subject, String mailBody);
+
+    Boolean generateAndSendMobileOtp(OtpRequest otpRequest);
+
+    boolean validateMobileOtp(String phoneNumber, String enteredOtp);
 }
