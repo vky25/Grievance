@@ -92,8 +92,6 @@ public class TicketServiceImpl implements TicketService {
         org.upsmf.grievance.model.es.Ticket esticket = convertToESTicketObj(ticket);
         // save ticket in ES
         esTicketRepository.save(esticket);
-        System.out.println(esticket);
-        System.out.println(psqlTicket);
         return psqlTicket;
     }
 
