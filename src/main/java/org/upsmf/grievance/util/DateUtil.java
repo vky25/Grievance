@@ -8,6 +8,9 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
@@ -199,10 +202,21 @@ public class DateUtil {
      * @throws Exception
      */
     public static Date getCurrentDate() throws Exception {
-        SimpleDateFormat formatterWithDefaultTimeZone = new SimpleDateFormat(DEFAULT_DATE_FORMAT);
-        Date currDate = new Date();
-        String currTimeWithTimeZone = formatterWithDefaultTimeZone.format(currDate);
-        return formatterWithDefaultTimeZone.parse(currTimeWithTimeZone);
+        LocalDateTime istDateTime = LocalDateTime.now(ZoneId.of("Asia/Kolkata"));
+        return Date.from(istDateTime.atZone(ZoneId.systemDefault()).toInstant());
+    }
+    public static String convertToIST(Timestamp timestamp) {
+        LocalDateTime dateTime = timestamp.toLocalDateTime();
+        LocalDateTime istDateTime = dateTime.atZone(ZoneId.of("Asia/Kolkata")).toLocalDateTime();
+
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return istDateTime.format(formatter);
+    }
+    public static Timestamp convertToISTInTS(Timestamp timestamp) {
+        LocalDateTime dateTime = timestamp.toLocalDateTime();
+        ZonedDateTime zonedDateTime = dateTime.atZone(ZoneId.of("Asia/Kolkata"));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return Timestamp.valueOf(zonedDateTime.toLocalDateTime().format(formatter));
     }
 
     /**
