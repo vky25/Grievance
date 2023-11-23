@@ -129,8 +129,8 @@ public class TicketServiceImpl implements TicketService {
         // create ticket
         ticket = saveWithAttachment(ticket, ticketRequest.getAttachmentUrls());
         // send mail
-        //EmailDetails emailDetails = EmailDetails.builder().recipient(ticket.getEmail()).subject("New Complaint Registration").build();
-        //emailService.sendCreateTicketMail(emailDetails, ticket);
+        EmailDetails emailDetails = EmailDetails.builder().recipient(ticket.getEmail()).subject("New Complaint Registration").build();
+        emailService.sendCreateTicketMail(emailDetails, ticket);
         System.out.println(ticket);
         return ticket;
     }
