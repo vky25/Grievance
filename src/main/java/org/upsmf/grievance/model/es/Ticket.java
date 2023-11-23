@@ -1,5 +1,6 @@
 package org.upsmf.grievance.model.es;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import org.springframework.data.annotation.Id;
 import org.springframework.data.elasticsearch.annotations.Document;
@@ -53,12 +54,14 @@ public class Ticket {
     @Field(name = "created_date")
     private String createdDate;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Kolkata")
     @Field(name = "updated_date")
     private String updatedDate;
 
     @Field(name = "created_date_ts")
     private Long createdDateTS;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Kolkata")
     @Field(name = "updated_date_ts")
     private Long updatedDateTS;
 
@@ -68,6 +71,7 @@ public class Ticket {
     @Field(name = "is_escalated")
     private Boolean escalated;
 
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Kolkata")
     @Field(name = "escalated_date")
     private String escalatedDate;
 

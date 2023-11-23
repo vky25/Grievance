@@ -10,6 +10,7 @@ import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
@@ -210,6 +211,12 @@ public class DateUtil {
 
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
         return istDateTime.format(formatter);
+    }
+    public static Timestamp convertToISTInTS(Timestamp timestamp) {
+        LocalDateTime dateTime = timestamp.toLocalDateTime();
+        ZonedDateTime zonedDateTime = dateTime.atZone(ZoneId.of("Asia/Kolkata"));
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+        return Timestamp.valueOf(zonedDateTime.toLocalDateTime().format(formatter));
     }
 
     /**

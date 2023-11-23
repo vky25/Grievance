@@ -33,6 +33,7 @@ import org.upsmf.grievance.service.TicketService;
 import org.upsmf.grievance.util.DateUtil;
 
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
@@ -491,10 +492,10 @@ public class SearchServiceImpl implements SearchService {
                 esTicket.setJunk((Boolean) entry.getValue());
                 break;
             case "created_date":
-                esTicket.setCreatedDate(String.valueOf(LocalDateTime.parse((String) entry.getValue())));
+                esTicket.setCreatedDate(DateUtil.convertToIST((Timestamp) entry.getValue()));
                 break;
             case "updated_date":
-                esTicket.setUpdatedDate(String.valueOf(LocalDateTime.parse((String) entry.getValue())));
+                esTicket.setUpdatedDate(DateUtil.convertToIST((Timestamp) entry.getValue()));
                 break;
             case "created_date_ts":
                 longValue = ((Number) entry.getValue()).longValue();
@@ -511,7 +512,7 @@ public class SearchServiceImpl implements SearchService {
                 esTicket.setEscalated((Boolean) entry.getValue());
                 break;
             case "escalated_date":
-                esTicket.setEscalatedDate((String) entry.getValue());
+                esTicket.setEscalatedDate(DateUtil.convertToIST((Timestamp) entry.getValue()));
                 break;
             case "escalated_date_ts":
                 longValue = ((Number) entry.getValue()).longValue();
