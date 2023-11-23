@@ -246,10 +246,6 @@ public class IntegrationServiceImpl implements IntegrationService {
             throw new UserException("module is missing", ErrorCode.USER_002);
         }
 
-        if (StringUtils.isEmpty(attributeMap.get("departmentName"))  ) {
-            throw new UserException("Department name is missing", ErrorCode.USER_002);
-        }
-
         if (StringUtils.isEmpty(attributeMap.get("phoneNumber"))  ) {
             throw new UserException("Phone numeber is missing", ErrorCode.USER_002);
         }
