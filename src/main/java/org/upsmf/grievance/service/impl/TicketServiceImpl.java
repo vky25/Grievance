@@ -11,6 +11,7 @@ import org.upsmf.grievance.dto.TicketRequest;
 import org.upsmf.grievance.dto.UpdateTicketRequest;
 import org.upsmf.grievance.enums.TicketPriority;
 import org.upsmf.grievance.enums.TicketStatus;
+import org.upsmf.grievance.exception.TicketException;
 import org.upsmf.grievance.model.*;
 import org.upsmf.grievance.repository.AssigneeTicketAttachmentRepository;
 import org.upsmf.grievance.repository.CommentRepository;
@@ -20,6 +21,7 @@ import org.upsmf.grievance.service.EmailService;
 import org.upsmf.grievance.service.OtpService;
 import org.upsmf.grievance.service.TicketService;
 import org.upsmf.grievance.util.DateUtil;
+import org.upsmf.grievance.util.ErrorCode;
 
 import javax.transaction.Transactional;
 import java.sql.Timestamp;
@@ -120,12 +122,15 @@ public class TicketServiceImpl implements TicketService {
         // validate OTP
         boolean isValid = otpService.validateOtp(ticketRequest.getEmail(), ticketRequest.getOtp());
         if(!isValid) {
-            throw new RuntimeException("Invalid mail OTP");
+            throw new TicketException("Invalid mail OTP, Please enter correct OTP", ErrorCode.TKT_001,
+                    "Error while matching mail OTP");
         } else {
-            boolean isMobileOtpValid = otpService.validateMobileOtp(ticketRequest.getPhone(), ticketRequest.getMobileOtp());
+            boolean isMobileOtpValid = otpService.validateMobileOtp(ticketRequest.getPhone(),
+                    ticketRequest.getMobileOtp());
 
             if (!isMobileOtpValid) {
-                throw new RuntimeException("Invalid mail OTP");
+                throw new TicketException("Invalid mobile OTP, Please enter correct OTP", ErrorCode.TKT_001,
+                        "Error while matching mobile OTP");
             }
         }
         // set default value for creating ticket

@@ -1,5 +1,6 @@
 package org.upsmf.grievance.controller;
 
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -8,11 +9,16 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.upsmf.grievance.dto.TicketRequest;
 import org.upsmf.grievance.dto.UpdateTicketRequest;
+import org.upsmf.grievance.exception.CustomException;
+import org.upsmf.grievance.exception.TicketException;
+import org.upsmf.grievance.exception.UserException;
 import org.upsmf.grievance.model.Ticket;
 import org.upsmf.grievance.model.reponse.Response;
 import org.upsmf.grievance.service.AttachmentService;
 import org.upsmf.grievance.service.TicketService;
+import org.upsmf.grievance.util.ErrorCode;
 
+@Slf4j
 @Controller
 @RequestMapping("/api/ticket")
 public class TicketController {
@@ -28,9 +34,12 @@ public class TicketController {
         Ticket responseTicket = null;
         try {
             responseTicket = ticketService.save(ticketRequest);
+        } catch (CustomException e) {
+            log.error("Error in while creating ticket - at controller");
+            throw new TicketException(e.getMessage(), ErrorCode.TKT_001, "Error while trying to create ticket");
         } catch (Exception e) {
-            e.printStackTrace();
-            throw new RuntimeException(e.getMessage());
+            log.error("Internal server error while creating ticket", e);
+            throw new TicketException("Internal server error while creating ticket", ErrorCode.TKT_002, e.getMessage());
         }
         Response response = new Response(HttpStatus.OK.value(), responseTicket);
         return new ResponseEntity<Response>(response, HttpStatus.OK);

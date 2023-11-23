@@ -6,10 +6,13 @@ public enum ErrorCode {
     OTP_002("Invalid sender id - calling external resource to send otp"),
     OTP_003("Invalid channel - calling external resource to send otp"),
     OTP_004("OTP server error - calling external resource to send otp"),
+    OTP_005("OTP mismatch"),
     DATA_001("Data unavailability in Redis server"),
     USER_001("Failed to find user"),
     USER_002("User already exist"),
     USER_003("Failed User creation"),
+    TKT_001("Failed ticket creation"),
+    TKT_002("Failed ticket creation - internal server error"),
     OTP_000("Internal OTP error");
 
     private String description;
