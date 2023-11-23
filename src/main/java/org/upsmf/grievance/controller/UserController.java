@@ -1,6 +1,7 @@
 package org.upsmf.grievance.controller;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -9,13 +10,16 @@ import org.springframework.web.bind.annotation.*;
 import org.upsmf.grievance.dto.CreateUserDto;
 import org.upsmf.grievance.dto.UpdateUserDto;
 import org.upsmf.grievance.dto.UserResponseDto;
+import org.upsmf.grievance.exception.CustomException;
+import org.upsmf.grievance.exception.UserException;
 import org.upsmf.grievance.model.Department;
 import org.upsmf.grievance.model.User;
 import org.upsmf.grievance.service.IntegrationService;
+import org.upsmf.grievance.util.ErrorCode;
 
 import java.util.*;
 
-
+@Slf4j
 @Controller
 @RequestMapping("/api/user")
 public class UserController {
@@ -38,14 +42,18 @@ public class UserController {
     @PostMapping("/create-user")
     public ResponseEntity createUser(@RequestBody CreateUserDto userRequest) {
         try {
-            ResponseEntity<User> user =  integrationService.createUser(userRequest);
-            if(user.getStatusCode() == HttpStatus.OK) {
+            ResponseEntity<User> user = integrationService.createUser(userRequest);
+            if (user.getStatusCode() == HttpStatus.OK) {
                 return createUserResponse(user.getBody());
             } else {
-                return ResponseEntity.internalServerError().build();
+                log.error("Error unable to create user - doesn't receive created user");
+                throw new UserException("Unable to create user", ErrorCode.USER_003, "Error while trying to create user");
             }
+        } catch (CustomException e) {
+            log.error("Error in while creating user - at controller");
+            throw new UserException(e.getMessage(), ErrorCode.USER_003, "Error while trying to create user");
         } catch (Exception e) {
-            e.printStackTrace();
+            log.error("Error while creating user", e);
             return ResponseEntity.internalServerError().body(e.getLocalizedMessage());
         }
     }

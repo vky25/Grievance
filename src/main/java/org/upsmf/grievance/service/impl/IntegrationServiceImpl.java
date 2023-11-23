@@ -8,6 +8,7 @@ import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.gax.rpc.NotFoundException;
 import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -18,6 +19,7 @@ import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.*;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.lang.NonNull;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
@@ -30,7 +32,9 @@ import org.upsmf.grievance.dto.UpdateUserDto;
 import org.upsmf.grievance.dto.UserCredentials;
 import org.upsmf.grievance.dto.UserResponseDto;
 import org.upsmf.grievance.enums.Department;
+import org.upsmf.grievance.exception.CustomException;
 import org.upsmf.grievance.exception.OtpException;
+import org.upsmf.grievance.exception.UserException;
 import org.upsmf.grievance.exception.runtime.InvalidRequestException;
 import org.upsmf.grievance.model.OtpRequest;
 import org.upsmf.grievance.model.Role;
@@ -68,6 +72,8 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Value("${api.user.searchUrl}")
     private String apiUrl;
+    @Value("${api.user.searchUserUrl}")
+    private String searchUserUrl;
 
     @Value("${api.user.listUrl}")
     private String listUserUrl;
@@ -135,6 +141,8 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Override
     public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
+        validateUserPayload(user);
+        checkUserInCenterUM(user.getUsername());
         // check for department
         String module = user.getAttributes().get("module");
         if (module != null) {
@@ -207,6 +215,81 @@ public class IntegrationServiceImpl implements IntegrationService {
             }
         } else {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void validateUserPayload(CreateUserDto userDto) {
+        if (userDto == null) {
+            throw new UserException("Invalid payload or missing payload", ErrorCode.USER_003);
+        }
+
+        if (StringUtils.isEmpty(userDto.getFirstName())) {
+            throw new UserException("First name is missing", ErrorCode.USER_002);
+        }
+        if (StringUtils.isEmpty(userDto.getLastName())) {
+            throw new UserException("Last name is missing", ErrorCode.USER_002);
+        }
+        if (StringUtils.isEmpty(userDto.getUsername())) {
+            throw new UserException("Username is missing", ErrorCode.USER_002);
+        }
+        if (StringUtils.isEmpty(userDto.getEmail())) {
+            throw new UserException("Email is missing", ErrorCode.USER_002);
+        }
+
+        Map<String, String> attributeMap = userDto.getAttributes();
+
+        if (attributeMap == null || attributeMap.isEmpty()) {
+            throw new UserException("User attributes are missing", ErrorCode.USER_002);
+        }
+
+        if (StringUtils.isEmpty(attributeMap.get("module"))  ) {
+            throw new UserException("module is missing", ErrorCode.USER_002);
+        }
+
+        if (StringUtils.isEmpty(attributeMap.get("departmentName"))  ) {
+            throw new UserException("Department name is missing", ErrorCode.USER_002);
+        }
+
+        if (StringUtils.isEmpty(attributeMap.get("phoneNumber"))  ) {
+            throw new UserException("Phone numeber is missing", ErrorCode.USER_002);
+        }
+
+        if (StringUtils.isEmpty(attributeMap.get("Role"))  ) {
+            throw new UserException("Role is missing", ErrorCode.USER_002);
+        }
+    }
+
+    /**
+     * @param username
+     */
+    private void checkUserInCenterUM(String username) {
+        try {
+            ObjectNode requestNode = mapper.createObjectNode();
+            requestNode.put("userName", username);
+            JsonNode payload = requestNode;
+            JsonNode payloadRoot = mapper.createObjectNode();
+            ((ObjectNode) payloadRoot).put("request", payload);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    searchUserUrl,
+                    HttpMethod.POST,
+                    new HttpEntity<>(payloadRoot),
+                    String.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                String getUsersResponseBody = response.getBody();
+                JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
+                if (getUsersJsonNode.size() > 0) {
+                    throw new UserException("User already exist", ErrorCode.USER_002, "User exist in central UM");
+                }
+            }
+        } catch (CustomException e) {
+            throw new UserException(e.getMessage(), ErrorCode.USER_002, "User exist in central UM");
+        } catch (Exception e) {
+            log.error("Error while checking user existance through central UM");
+            throw new UserException("Due to technical issue unable to process your request", ErrorCode.USER_001,
+                    "Error while finding user in central UM");
         }
     }
 

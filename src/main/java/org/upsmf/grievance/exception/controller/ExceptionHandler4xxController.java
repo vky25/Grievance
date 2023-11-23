@@ -59,9 +59,12 @@ public class ExceptionHandler4xxController {
 
     private Map<String, Object> generateErrorMap(CustomException exception) {
         Map<String, Object> errorResponse = new HashMap<>();
-        errorResponse.put("error_code", exception.getErrorCode().name());
+        String errorCode = exception.getErrorCode() != null ? exception.getErrorCode().name() : "NA";
+
+        errorResponse.put("error_code", errorCode);
         errorResponse.put("error_message", exception.getMessage());
         errorResponse.put("description", exception.getDescription());
+
         return errorResponse;
     }
 }
