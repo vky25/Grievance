@@ -275,6 +275,7 @@ public class TicketServiceImpl implements TicketService {
         }
 
         if(updateTicketRequest.getCc()!=null && !updateTicketRequest.getCc().isBlank()) {
+
             ticket.setAssignedToId(updateTicketRequest.getCc());
         }
         if(updateTicketRequest.getPriority()!=null) {

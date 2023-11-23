@@ -9,6 +9,8 @@ import org.upsmf.grievance.enums.RequesterType;
 import org.upsmf.grievance.enums.TicketPriority;
 import org.upsmf.grievance.enums.TicketStatus;
 
+import javax.persistence.Column;
+
 @Document(indexName = "ticket", createIndex = false)
 @Getter
 @Setter
@@ -51,7 +53,8 @@ public class Ticket {
     @Field(name = "is_junk")
     private Boolean junk = false;
 
-    @Field(name = "created_date")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
+    @Column(name = "created_date")
     private String createdDate;
 
     @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Kolkata")
@@ -61,7 +64,6 @@ public class Ticket {
     @Field(name = "created_date_ts")
     private Long createdDateTS;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Kolkata")
     @Field(name = "updated_date_ts")
     private Long updatedDateTS;
 
@@ -71,7 +73,7 @@ public class Ticket {
     @Field(name = "is_escalated")
     private Boolean escalated;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss", timezone = "Asia/Kolkata")
+    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
     @Field(name = "escalated_date")
     private String escalatedDate;
 

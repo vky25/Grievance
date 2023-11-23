@@ -33,9 +33,9 @@ import org.upsmf.grievance.service.TicketService;
 import org.upsmf.grievance.util.DateUtil;
 
 import java.io.IOException;
-import java.sql.Timestamp;
 import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
 
@@ -69,6 +69,8 @@ public class SearchServiceImpl implements SearchService {
 
     @Value("${assessment}")
     private String ASSESSMENT;
+    DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss.S");
+
 
     private Map<String, Object> departmentNameResponse = new HashMap<>();
     private Map<String, Object> performanceIndicatorsResponse = new HashMap<>();
@@ -492,10 +494,10 @@ public class SearchServiceImpl implements SearchService {
                 esTicket.setJunk((Boolean) entry.getValue());
                 break;
             case "created_date":
-                esTicket.setCreatedDate(DateUtil.convertToIST((Timestamp) entry.getValue()));
+                esTicket.setCreatedDate((String) entry.getValue());
                 break;
             case "updated_date":
-                esTicket.setUpdatedDate(DateUtil.convertToIST((Timestamp) entry.getValue()));
+                esTicket.setUpdatedDate((String) entry.getValue());
                 break;
             case "created_date_ts":
                 longValue = ((Number) entry.getValue()).longValue();
@@ -512,7 +514,7 @@ public class SearchServiceImpl implements SearchService {
                 esTicket.setEscalated((Boolean) entry.getValue());
                 break;
             case "escalated_date":
-                esTicket.setEscalatedDate(DateUtil.convertToIST((Timestamp) entry.getValue()));
+                esTicket.setEscalatedDate((String) entry.getValue());
                 break;
             case "escalated_date_ts":
                 longValue = ((Number) entry.getValue()).longValue();
