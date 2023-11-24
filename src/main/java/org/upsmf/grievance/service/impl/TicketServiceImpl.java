@@ -16,6 +16,7 @@ import org.upsmf.grievance.model.*;
 import org.upsmf.grievance.repository.AssigneeTicketAttachmentRepository;
 import org.upsmf.grievance.repository.CommentRepository;
 import org.upsmf.grievance.repository.RaiserTicketAttachmentRepository;
+import org.upsmf.grievance.repository.UserRepository;
 import org.upsmf.grievance.repository.es.TicketRepository;
 import org.upsmf.grievance.service.EmailService;
 import org.upsmf.grievance.service.OtpService;
@@ -25,6 +26,7 @@ import org.upsmf.grievance.util.ErrorCode;
 
 import javax.transaction.Transactional;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -57,6 +59,8 @@ public class TicketServiceImpl implements TicketService {
 
     @Autowired
     private RaiserTicketAttachmentRepository raiserTicketAttachmentRepository;
+    @Autowired
+    private UserRepository userRepository;
 
     @Autowired
     private OtpService otpService;
@@ -141,6 +145,7 @@ public class TicketServiceImpl implements TicketService {
         // send mail
         EmailDetails emailDetails = EmailDetails.builder().recipient(ticket.getEmail()).subject("New Complaint Registration").build();
         emailService.sendCreateTicketMail(emailDetails, ticket);
+        System.out.println(ticket);
         return ticket;
     }
 
@@ -290,6 +295,15 @@ public class TicketServiceImpl implements TicketService {
         }
         if(updateTicketRequest.getIsJunk()!=null) {
             ticket.setJunk(updateTicketRequest.getIsJunk());
+            if (updateTicketRequest.getRequestedBy() != null && updateTicketRequest.getRequestedBy().isBlank()) {
+                ticket.setJunkedBy("-1");
+            } else {
+                User user = userRepository.findByKeycloakId(updateTicketRequest.getRequestedBy()).orElseThrow();
+                String firstName = user.getFirstName();
+                String lastName = user.getLastname();
+                String junkedBy = firstName + " " + lastName;
+                ticket.setJunkedBy(junkedBy);
+            }
         }
         ticket.setUpdatedDate(new Timestamp(DateUtil.getCurrentDate().getTime()));
         // update assignee comments
@@ -318,7 +332,7 @@ public class TicketServiceImpl implements TicketService {
      * @return
      */
     private org.upsmf.grievance.model.es.Ticket convertToESTicketObj(Ticket ticket) {
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DateUtil.DEFAULT_DATE_FORMAT);
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DateUtil.DEFAULT_DATE_FORMATTS);
         // get user details based on ID
         return org.upsmf.grievance.model.es.Ticket.builder()
                 .ticketId(ticket.getId())
@@ -331,6 +345,7 @@ public class TicketServiceImpl implements TicketService {
                 .assignedToName("") // get user details based on ID
                 .description(ticket.getDescription())
                 .junk(ticket.isJunk())
+                .junkedBy(ticket.getJunkedBy())
                 .createdDate(ticket.getCreatedDate().toLocalDateTime().format(dateTimeFormatter))
                 .createdDateTS(ticket.getCreatedDate().getTime())
                 .updatedDate(ticket.getUpdatedDate().toLocalDateTime().format(dateTimeFormatter))
@@ -345,8 +360,7 @@ public class TicketServiceImpl implements TicketService {
                 .escalatedBy(ticket.getEscalatedBy())
                 .escalatedTo(ticket.getEscalatedTo())
                 .escalatedToAdmin(ticket.isEscalatedToAdmin())
-                .rating(Long.valueOf(0)).build();
-
+                .rating(0L).build();
     }
 
     /**
@@ -426,7 +440,11 @@ public class TicketServiceImpl implements TicketService {
     @Synchronized
     public void updateTicket(Long ticketId) {
         Ticket ticket = getTicketById(ticketId);
-        ticket.setUpdatedDate(new Timestamp(new Date().getTime()));
+        try {
+            ticket.setUpdatedDate(new Timestamp(DateUtil.getCurrentDate().getTime()));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         ticket.setEscalatedDate(new Timestamp(new Date().getTime()));
         ticket.setEscalatedToAdmin(true);
         ticket.setPriority(TicketPriority.MEDIUM);
