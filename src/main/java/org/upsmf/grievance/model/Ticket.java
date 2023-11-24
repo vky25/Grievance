@@ -1,6 +1,5 @@
 package org.upsmf.grievance.model;
 
-import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.*;
 import org.hibernate.annotations.Fetch;
 import org.hibernate.annotations.FetchMode;
@@ -50,11 +49,9 @@ public class Ticket {
     @Column(name = "is_junk")
     private boolean junk = false;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
     @Column(name = "created_date")
     private Timestamp createdDate;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
     @Column(name = "updated_date")
     private Timestamp updatedDate;
 
@@ -67,7 +64,6 @@ public class Ticket {
     @Column(name = "is_escalated_to_admin")
     private boolean escalatedToAdmin;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
     @Column(name = "escalated_date")
     private Timestamp escalatedDate;
 

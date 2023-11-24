@@ -25,7 +25,6 @@ import org.upsmf.grievance.util.ErrorCode;
 
 import javax.transaction.Transactional;
 import java.sql.Timestamp;
-import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
@@ -142,7 +141,6 @@ public class TicketServiceImpl implements TicketService {
         // send mail
         EmailDetails emailDetails = EmailDetails.builder().recipient(ticket.getEmail()).subject("New Complaint Registration").build();
         emailService.sendCreateTicketMail(emailDetails, ticket);
-        System.out.println(ticket);
         return ticket;
     }
 
@@ -154,12 +152,10 @@ public class TicketServiceImpl implements TicketService {
      */
     private Ticket createTicketWithDefault(TicketRequest ticketRequest) throws Exception {
 
-        Timestamp currentTimestamp = DateUtil.convertToISTInTS(new Timestamp(DateUtil.getCurrentDate().getTime()));
-        LocalDateTime escalationDateTime = LocalDateTime.now().plusDays(Long.parseLong(ticketEscalationDays));
-        ZoneId istZone = ZoneId.of("Asia/Kolkata");
-        LocalDateTime istDateTime = escalationDateTime.atZone(istZone).toLocalDateTime();
+        Timestamp currentTimestamp = new Timestamp(DateUtil.getCurrentDate().getTime());
+        LocalDateTime escalationDateTime = LocalDateTime.now().plus(Long.valueOf(ticketEscalationDays), ChronoUnit.DAYS);
         return Ticket.builder()
-                .createdDate(currentTimestamp)
+                .createdDate(new Timestamp(DateUtil.getCurrentDate().getTime()))
                 .firstName(ticketRequest.getFirstName())
                 .lastName(ticketRequest.getLastName())
                 .phone(ticketRequest.getPhone())
@@ -170,7 +166,7 @@ public class TicketServiceImpl implements TicketService {
                 .updatedDate(currentTimestamp)
                 .lastUpdatedBy("-1")//need to get user details and add id or name
                 .escalated(false)
-                .escalatedDate(Timestamp.valueOf(istDateTime))
+                .escalatedDate(Timestamp.valueOf(escalationDateTime))
                 .escalatedTo("-1")
                 .status(TicketStatus.OPEN)
                 .requestType(ticketRequest.getRequestType())
@@ -295,7 +291,7 @@ public class TicketServiceImpl implements TicketService {
         if(updateTicketRequest.getIsJunk()!=null) {
             ticket.setJunk(updateTicketRequest.getIsJunk());
         }
-        ticket.setUpdatedDate(DateUtil.convertToISTInTS(new Timestamp(DateUtil.getCurrentDate().getTime())));
+        ticket.setUpdatedDate(new Timestamp(DateUtil.getCurrentDate().getTime()));
         // update assignee comments
         if(updateTicketRequest.getComment()!=null) {
             Comments comments = Comments.builder().comment(updateTicketRequest.getComment())
@@ -322,6 +318,7 @@ public class TicketServiceImpl implements TicketService {
      * @return
      */
     private org.upsmf.grievance.model.es.Ticket convertToESTicketObj(Ticket ticket) {
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DateUtil.DEFAULT_DATE_FORMAT);
         // get user details based on ID
         return org.upsmf.grievance.model.es.Ticket.builder()
                 .ticketId(ticket.getId())
@@ -334,13 +331,13 @@ public class TicketServiceImpl implements TicketService {
                 .assignedToName("") // get user details based on ID
                 .description(ticket.getDescription())
                 .junk(ticket.isJunk())
-                .createdDate(String.valueOf(ticket.getCreatedDate()))
+                .createdDate(ticket.getCreatedDate().toLocalDateTime().format(dateTimeFormatter))
                 .createdDateTS(ticket.getCreatedDate().getTime())
-                .updatedDate(String.valueOf(ticket.getUpdatedDate()))
+                .updatedDate(ticket.getUpdatedDate().toLocalDateTime().format(dateTimeFormatter))
                 .updatedDateTS(ticket.getUpdatedDate().getTime())
                 .lastUpdatedBy(ticket.getLastUpdatedBy())
                 .escalated(ticket.isEscalated())
-                .escalatedDate(ticket.getEscalatedDate() != null ? DateUtil.convertToIST(ticket.getEscalatedDate()) : null)
+                .escalatedDate(ticket.getEscalatedDate()!=null?ticket.getEscalatedDate().toLocalDateTime().format(dateTimeFormatter):null)
                 .escalatedDateTS(ticket.getEscalatedDate()!=null?ticket.getEscalatedDate().getTime():-1)
                 .status(ticket.getStatus())
                 .requestType(ticket.getRequestType())
@@ -348,7 +345,8 @@ public class TicketServiceImpl implements TicketService {
                 .escalatedBy(ticket.getEscalatedBy())
                 .escalatedTo(ticket.getEscalatedTo())
                 .escalatedToAdmin(ticket.isEscalatedToAdmin())
-                .rating(0L).build();
+                .rating(Long.valueOf(0)).build();
+
     }
 
     /**
@@ -428,11 +426,7 @@ public class TicketServiceImpl implements TicketService {
     @Synchronized
     public void updateTicket(Long ticketId) {
         Ticket ticket = getTicketById(ticketId);
-        try {
-            ticket.setUpdatedDate(new Timestamp(DateUtil.getCurrentDate().getTime()));
-        } catch (Exception e) {
-            throw new RuntimeException(e);
-        }
+        ticket.setUpdatedDate(new Timestamp(new Date().getTime()));
         ticket.setEscalatedDate(new Timestamp(new Date().getTime()));
         ticket.setEscalatedToAdmin(true);
         ticket.setPriority(TicketPriority.MEDIUM);
