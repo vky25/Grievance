@@ -465,7 +465,16 @@ public class IntegrationServiceImpl implements IntegrationService {
 
         List<UserResponseDto> childNodes = new ArrayList<>();
         Pageable pageable = PageRequest.of(payload.get("page").asInt(), payload.get("size").asInt(), Sort.by(Sort.Direction.DESC, "id"));
-        Page<User> users = userRepository.findAll(pageable);
+        Page<User> users = Page.empty();
+
+        if (payload.get("searchKeyword") != null && !payload.get("searchKeyword").asText().isBlank()) {
+            String email = payload.get("searchKeyword").asText();
+
+            users = userRepository.findByEmailWithPagination(email, pageable);
+        } else {
+            users = userRepository.findAll(pageable);
+        }
+
         if (users.hasContent()) {
             for (User user : users.getContent()) {
                 childNodes.add(createUserResponse(user));
