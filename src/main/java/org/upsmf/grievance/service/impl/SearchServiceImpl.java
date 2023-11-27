@@ -495,6 +495,9 @@ public class SearchServiceImpl implements SearchService {
             case "updated_date":
                 esTicket.setUpdatedDate((String) entry.getValue());
                 break;
+            case "junked_by":
+                esTicket.setJunkedBy((String) entry.getValue());
+                break;
             case "created_date_ts":
                 longValue = ((Number) entry.getValue()).longValue();
                 esTicket.setCreatedDateTS(longValue);
