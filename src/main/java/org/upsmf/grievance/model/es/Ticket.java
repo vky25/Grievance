@@ -56,11 +56,11 @@ public class Ticket {
     @Field(name = "junked_by")
     private String junkedBy;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
+//    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
     @Field(name = "created_date")
     private String createdDate;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
+//    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
     @Field(name = "updated_date")
     private String updatedDate;
 
@@ -76,7 +76,7 @@ public class Ticket {
     @Field(name = "is_escalated")
     private Boolean escalated;
 
-    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
+//    @JsonFormat(pattern = "yyyy-MM-dd HH:mm:ss.S", timezone = "Asia/Kolkata")
     @Field(name = "escalated_date")
     private String escalatedDate;
 
