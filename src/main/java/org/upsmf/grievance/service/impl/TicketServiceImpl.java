@@ -295,7 +295,7 @@ public class TicketServiceImpl implements TicketService {
         }
         if(updateTicketRequest.getIsJunk()!=null) {
             ticket.setJunk(updateTicketRequest.getIsJunk());
-            if (updateTicketRequest.getRequestedBy() != null && updateTicketRequest.getRequestedBy().isBlank()) {
+            if (updateTicketRequest.getRequestedBy() == null || updateTicketRequest.getRequestedBy().isBlank()) {
                 ticket.setJunkedBy("-1");
             } else {
                 User user = userRepository.findByKeycloakId(updateTicketRequest.getRequestedBy()).orElseThrow();
