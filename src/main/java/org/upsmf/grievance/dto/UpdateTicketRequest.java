@@ -23,4 +23,5 @@ public class UpdateTicketRequest {
     private String comment;
     private List<String> assigneeAttachmentURLs;
     private Boolean isJunk;
+    private Boolean isNudged;
 }

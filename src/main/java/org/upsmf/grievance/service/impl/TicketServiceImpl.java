@@ -6,6 +6,7 @@ import lombok.Synchronized;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.upsmf.grievance.dto.TicketRequest;
 import org.upsmf.grievance.dto.UpdateTicketRequest;
@@ -13,10 +14,7 @@ import org.upsmf.grievance.enums.TicketPriority;
 import org.upsmf.grievance.enums.TicketStatus;
 import org.upsmf.grievance.exception.TicketException;
 import org.upsmf.grievance.model.*;
-import org.upsmf.grievance.repository.AssigneeTicketAttachmentRepository;
-import org.upsmf.grievance.repository.CommentRepository;
-import org.upsmf.grievance.repository.RaiserTicketAttachmentRepository;
-import org.upsmf.grievance.repository.UserRepository;
+import org.upsmf.grievance.repository.*;
 import org.upsmf.grievance.repository.es.TicketRepository;
 import org.upsmf.grievance.service.EmailService;
 import org.upsmf.grievance.service.OtpService;
@@ -36,6 +34,9 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static org.upsmf.grievance.enums.Department.*;
 
 @Service
 public class TicketServiceImpl implements TicketService {
@@ -50,6 +51,8 @@ public class TicketServiceImpl implements TicketService {
 
     @Value("${ticket.escalation.days}")
     private String ticketEscalationDays;
+    @Value("${mail.reminder.subject}")
+    private String mailReminderSubject;
 
     @Autowired
     private CommentRepository commentRepository;
@@ -61,6 +64,8 @@ public class TicketServiceImpl implements TicketService {
     private RaiserTicketAttachmentRepository raiserTicketAttachmentRepository;
     @Autowired
     private UserRepository userRepository;
+    @Autowired
+    private DepartmentRepository departmentRepository;
 
     @Autowired
     private OtpService otpService;
@@ -177,6 +182,7 @@ public class TicketServiceImpl implements TicketService {
                 .requestType(ticketRequest.getRequestType())
                 .priority(TicketPriority.LOW)
                 .escalatedBy("-1")
+                .reminderCounter(0L)
                 .build();
     }
 
@@ -222,11 +228,24 @@ public class TicketServiceImpl implements TicketService {
         } else if (curentUpdatedTicket.getStatus().name().equalsIgnoreCase(TicketStatus.INVALID.name())) {
             generateFeedbackLinkAndEmailForJunkTicket(ticket);
             return ticket;
-        }else {
+        }else if (updateTicketRequest.getIsNudged() != null && updateTicketRequest.getIsNudged()
+                && !org.apache.commons.lang.StringUtils.isEmpty(updateTicketRequest.getCc())) {
+            sendMailToNodal(updateTicketRequest.getCc(), ticket);
+            return ticket;
+        } else {
             EmailDetails resolutionOfYourGrievance = EmailDetails.builder().subject("Resolution of Your Grievance - " + curentUpdatedTicket.getTicketId()).recipient(curentUpdatedTicket.getEmail()).build();
             emailService.sendUpdateTicketMail(resolutionOfYourGrievance, ticket);
             return ticket;
         }
+    }
+
+    private void sendMailToNodal(@NonNull String cc, Ticket ticket) {
+
+        EmailDetails emailDetails = EmailDetails.builder()
+                .subject(mailReminderSubject)
+                .build();
+
+        emailService.sendMailToNodalOfficers(emailDetails, ticket);
     }
 
     private void generateFeedbackLinkAndEmail(Ticket curentUpdatedTicket) {
@@ -284,6 +303,14 @@ public class TicketServiceImpl implements TicketService {
         // TODO check request role and permission
         if(updateTicketRequest.getStatus()!=null) {
             ticket.setStatus(updateTicketRequest.getStatus());
+        }
+
+        if (updateTicketRequest.getIsNudged() != null && updateTicketRequest.getIsNudged()){
+            if (ticket.getReminderCounter() != null){
+                ticket.setReminderCounter(ticket.getReminderCounter() + 1);
+            } else {
+                ticket.setReminderCounter(0L);
+            }
         }
 
         if(updateTicketRequest.getCc()!=null && !updateTicketRequest.getCc().isBlank()) {
@@ -360,6 +387,7 @@ public class TicketServiceImpl implements TicketService {
                 .escalatedBy(ticket.getEscalatedBy())
                 .escalatedTo(ticket.getEscalatedTo())
                 .escalatedToAdmin(ticket.isEscalatedToAdmin())
+                .reminderCounter(ticket.getReminderCounter())
                 .rating(0L).build();
     }
 

@@ -105,4 +105,7 @@ public class Ticket {
     @Field(name ="is_escalated_to_admin")
     private Boolean escalatedToAdmin;
 
+    @Field(name = "reminder_counter")
+    private Long reminderCounter;
+
 }

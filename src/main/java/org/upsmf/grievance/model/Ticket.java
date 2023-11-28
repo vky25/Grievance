@@ -90,6 +90,9 @@ public class Ticket {
     @Column(name = "escalated_by")
     private String escalatedBy = "-1";
 
+    @Column(name = "reminder_counter")
+    private Long reminderCounter = 0L;
+
     @OneToMany(targetEntity = Comments.class, mappedBy = "ticketId", fetch = FetchType.EAGER)
     @Fetch(value = FetchMode.SUBSELECT)
     private List<Comments> comments;

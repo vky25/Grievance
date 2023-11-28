@@ -24,4 +24,6 @@ public interface EmailService {
     void sendMailWithAttachment(EmailDetails details);
 
     void sendMailToDGME(EmailDetails details, JsonNode assessmentMatrix);
+
+    public void sendMailToNodalOfficers(EmailDetails details, Ticket ticket);
 }
