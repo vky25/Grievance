@@ -3,6 +3,7 @@ package org.upsmf.grievance.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.util.StringUtils;
 import lombok.Synchronized;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
@@ -39,6 +40,7 @@ import java.util.stream.Collectors;
 import static org.upsmf.grievance.enums.Department.*;
 
 @Service
+@Slf4j
 public class TicketServiceImpl implements TicketService {
 
     @Autowired
@@ -360,6 +362,10 @@ public class TicketServiceImpl implements TicketService {
      */
     private org.upsmf.grievance.model.es.Ticket convertToESTicketObj(Ticket ticket) {
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DateUtil.DEFAULT_DATE_FORMATTS);
+
+        log.info(">>>>>>>>>>>>>>>>>>>>>> system time from ticket data: "
+                + ticket.getCreatedDate().toLocalDateTime().format(dateTimeFormatter));
+
         // get user details based on ID
         return org.upsmf.grievance.model.es.Ticket.builder()
                 .ticketId(ticket.getId())
