@@ -67,6 +67,7 @@ public class SearchServiceImpl implements SearchService {
     @Value("${assessment}")
     private String ASSESSMENT;
 
+
     private Map<String, Object> departmentNameResponse = new HashMap<>();
     private Map<String, Object> performanceIndicatorsResponse = new HashMap<>();
     private Map<String, Object> finalResponse = new HashMap<>();
@@ -339,9 +340,10 @@ public class SearchServiceImpl implements SearchService {
         SearchResponse searchResponse;
         String keyValue = searchRequest.getSort().keySet().iterator().next();
         keyValue = getKeyValue(keyValue);
+        int from = searchRequest.getPage() > 0 ? (searchRequest.getPage() * searchRequest.getSize()) : 0;
         SearchSourceBuilder searchSourceBuilder = new SearchSourceBuilder()
                 .query(createTicketSearchQuery(searchRequest))
-                .from(searchRequest.getPage())
+                .from(from)
                 .size(searchRequest.getSize())
                 .sort(keyValue, SortOrder.valueOf(searchRequest.getSort().get(searchRequest.getSort().keySet().iterator().next()).toUpperCase()));
 
@@ -493,6 +495,9 @@ public class SearchServiceImpl implements SearchService {
                 break;
             case "updated_date":
                 esTicket.setUpdatedDate((String) entry.getValue());
+                break;
+            case "junked_by":
+                esTicket.setJunkedBy((String) entry.getValue());
                 break;
             case "created_date_ts":
                 longValue = ((Number) entry.getValue()).longValue();

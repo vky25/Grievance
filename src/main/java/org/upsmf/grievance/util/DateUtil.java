@@ -8,6 +8,9 @@ import java.sql.Timestamp;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Calendar;
 import java.util.Date;
@@ -20,6 +23,7 @@ public class DateUtil {
     public static final Logger LOGGER = LoggerFactory.getLogger(DateUtil.class);
 
     public static final String DEFAULT_DATE_FORMAT = "yyyy-MM-dd HH:mm:ss";
+    public static final String DEFAULT_DATE_FORMATTS ="yyyy-MM-dd HH:mm:ss.S";
     public static final String INVOICE_DATE_FORMATTER = "EEEE, MMMM d, yyyy";
     public static final String YYYYMMDD_FORMATTER = "yyyy-MM-dd";
     public static final String DATE_MONTH_YEAR_FORMAT = "dd-MMMM-yyyy";

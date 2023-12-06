@@ -6,7 +6,9 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.google.api.gax.rpc.NotFoundException;
+import com.google.gson.Gson;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.EmptyResultDataAccessException;
@@ -14,19 +16,27 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.*;
 import org.springframework.http.converter.json.MappingJackson2HttpMessageConverter;
+import org.springframework.lang.NonNull;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.server.ResponseStatusException;
+import org.springframework.web.util.UriComponents;
+import org.springframework.web.util.UriComponentsBuilder;
 import org.upsmf.grievance.dto.CreateUserDto;
 import org.upsmf.grievance.dto.UpdateUserDto;
 import org.upsmf.grievance.dto.UserCredentials;
 import org.upsmf.grievance.dto.UserResponseDto;
 import org.upsmf.grievance.enums.Department;
+import org.upsmf.grievance.exception.CustomException;
+import org.upsmf.grievance.exception.OtpException;
+import org.upsmf.grievance.exception.UserException;
 import org.upsmf.grievance.exception.runtime.InvalidRequestException;
+import org.upsmf.grievance.model.OtpRequest;
 import org.upsmf.grievance.model.Role;
 import org.upsmf.grievance.model.User;
 import org.upsmf.grievance.model.UserRole;
@@ -35,9 +45,12 @@ import org.upsmf.grievance.repository.RoleRepository;
 import org.upsmf.grievance.repository.UserRepository;
 import org.upsmf.grievance.repository.UserRoleRepository;
 import org.upsmf.grievance.service.IntegrationService;
+import org.upsmf.grievance.util.ErrorCode;
 
 import javax.transaction.Transactional;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.TimeUnit;
 
 @Service
 @Slf4j
@@ -59,6 +72,8 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Value("${api.user.searchUrl}")
     private String apiUrl;
+    @Value("${api.user.searchUserUrl}")
+    private String searchUserUrl;
 
     @Value("${api.user.listUrl}")
     private String listUserUrl;
@@ -71,6 +86,38 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Value("${api.user.loginUserUrl}")
     private String loginUserUrl;
+    @Value("${mobile.sms.uri}")
+    private String mobileSmsUri;
+
+    @Value("${mobile.sms.apikey}")
+    private String mobileSmsApiKey;
+
+    @Value("${mobile.sms.senderid}")
+    private String mobileSmsSenderId;
+
+    @Value("${mobile.sms.channel}")
+    private String mobileSmsChannel;
+
+    @Value("${mobile.sms.DCS}")
+    private String mobileSmsDCS;
+
+    @Value("${mobile.sms.flashsms}")
+    private String mobileSmsFlashsms;
+
+    @Value("${mobile.sms.text}")
+    private String mobileSmsText;
+
+    @Value("${mobile.sms.route}")
+    private String mobileSmsRoute;
+
+    @Value("${mobile.sms.DLTTemplateId}")
+    private String mobileSmsDLTTemplateId;
+
+    @Autowired
+    private StringRedisTemplate redisTemplate;
+
+    @Value("${otp.expiration.minutes}")
+    private int otpExpirationMinutes;
 
     @Autowired
     private ObjectMapper mapper;
@@ -94,6 +141,8 @@ public class IntegrationServiceImpl implements IntegrationService {
 
     @Override
     public ResponseEntity<User> createUser(CreateUserDto user) throws Exception {
+        validateUserPayload(user);
+        checkUserInCenterUM(user.getUsername());
         // check for department
         String module = user.getAttributes().get("module");
         if (module != null) {
@@ -166,6 +215,77 @@ public class IntegrationServiceImpl implements IntegrationService {
             }
         } else {
             return new ResponseEntity<>(HttpStatus.INTERNAL_SERVER_ERROR);
+        }
+    }
+
+    private void validateUserPayload(CreateUserDto userDto) {
+        if (userDto == null) {
+            throw new UserException("Invalid payload or missing payload", ErrorCode.USER_003);
+        }
+
+        if (StringUtils.isEmpty(userDto.getFirstName())) {
+            throw new UserException("First name is missing", ErrorCode.USER_002);
+        }
+        if (StringUtils.isEmpty(userDto.getLastName())) {
+            throw new UserException("Last name is missing", ErrorCode.USER_002);
+        }
+        if (StringUtils.isEmpty(userDto.getUsername())) {
+            throw new UserException("Username is missing", ErrorCode.USER_002);
+        }
+        if (StringUtils.isEmpty(userDto.getEmail())) {
+            throw new UserException("Email is missing", ErrorCode.USER_002);
+        }
+
+        Map<String, String> attributeMap = userDto.getAttributes();
+
+        if (attributeMap == null || attributeMap.isEmpty()) {
+            throw new UserException("User attributes are missing", ErrorCode.USER_002);
+        }
+
+        if (StringUtils.isEmpty(attributeMap.get("module"))  ) {
+            throw new UserException("module is missing", ErrorCode.USER_002);
+        }
+
+        if (StringUtils.isEmpty(attributeMap.get("phoneNumber"))  ) {
+            throw new UserException("Phone numeber is missing", ErrorCode.USER_002);
+        }
+
+        if (StringUtils.isEmpty(attributeMap.get("Role"))  ) {
+            throw new UserException("Role is missing", ErrorCode.USER_002);
+        }
+    }
+
+    /**
+     * @param username
+     */
+    private void checkUserInCenterUM(String username) {
+        try {
+            ObjectNode requestNode = mapper.createObjectNode();
+            requestNode.put("userName", username);
+            JsonNode payload = requestNode;
+            JsonNode payloadRoot = mapper.createObjectNode();
+            ((ObjectNode) payloadRoot).put("request", payload);
+
+            ResponseEntity<String> response = restTemplate.exchange(
+                    searchUserUrl,
+                    HttpMethod.POST,
+                    new HttpEntity<>(payloadRoot),
+                    String.class
+            );
+
+            if (response.getStatusCode() == HttpStatus.OK) {
+                String getUsersResponseBody = response.getBody();
+                JsonNode getUsersJsonNode = mapper.readTree(getUsersResponseBody);
+                if (getUsersJsonNode.size() > 0) {
+                    throw new UserException("User already exist", ErrorCode.USER_002, "User exist in central UM");
+                }
+            }
+        } catch (CustomException e) {
+            throw new UserException(e.getMessage(), ErrorCode.USER_002, "User exist in central UM");
+        } catch (Exception e) {
+            log.error("Error while checking user existance through central UM");
+            throw new UserException("Due to technical issue unable to process your request", ErrorCode.USER_001,
+                    "Error while finding user in central UM");
         }
     }
 
@@ -345,7 +465,16 @@ public class IntegrationServiceImpl implements IntegrationService {
 
         List<UserResponseDto> childNodes = new ArrayList<>();
         Pageable pageable = PageRequest.of(payload.get("page").asInt(), payload.get("size").asInt(), Sort.by(Sort.Direction.DESC, "id"));
-        Page<User> users = userRepository.findAll(pageable);
+        Page<User> users = Page.empty();
+
+        if (payload.get("searchKeyword") != null && !payload.get("searchKeyword").asText().isBlank()) {
+            String email = payload.get("searchKeyword").asText();
+
+            users = userRepository.findByEmailWithPagination(email, pageable);
+        } else {
+            users = userRepository.findAll(pageable);
+        }
+
         if (users.hasContent()) {
             for (User user : users.getContent()) {
                 childNodes.add(createUserResponse(user));
@@ -603,5 +732,73 @@ public class IntegrationServiceImpl implements IntegrationService {
         mailSender.send(message);
     }
 
+    /**
+     * @param name
+     * @param phoneNumber
+     * @param otp
+     * @return
+     */
+    @Override
+    public Boolean sendMobileOTP(String name, String phoneNumber, String otp) {
+        String smsText = mobileSmsText.replace("{USER}", name);
+        smsText = smsText.replace("{OTP}", otp);
+
+        UriComponents uriComponents = UriComponentsBuilder.fromHttpUrl(mobileSmsUri)
+                .queryParam("apikey", mobileSmsApiKey)
+                .queryParam("senderid", mobileSmsSenderId)
+                .queryParam("channel", mobileSmsChannel)
+                .queryParam("DCS", mobileSmsDCS)
+                .queryParam("flashsms", mobileSmsFlashsms)
+                .queryParam("number", phoneNumber)
+                .queryParam("text", smsText)
+                .queryParam("route", mobileSmsRoute)
+                .queryParam("DLTTemplateId", mobileSmsDLTTemplateId)
+                .build();
+
+        ResponseEntity<JsonNode> response = null;
+
+        try {
+            response = restTemplate.exchange(uriComponents.toString(), HttpMethod.GET,
+                    new HttpEntity<>(null), JsonNode.class);
+        } catch (Exception e) {
+            log.error("Error while calling external OTP service", e);
+            throw new OtpException("Error reponse from external service", ErrorCode.OTP_004,
+                    "While calling upsmf otp servcie it's thrwoing 400 or 500 response");
+        }
+
+        processResponseMessage(response);
+
+        return true;
+    }
+
+    /**
+     * @param response
+     */
+    private void processResponseMessage(ResponseEntity<JsonNode> response) {
+        if (response.getStatusCode() == HttpStatus.OK) {
+            JsonNode resonseJsonNode = response.getBody();
+            JsonNode errorCodeNode = resonseJsonNode.get("ErrorCode");
+            JsonNode errorMessage = resonseJsonNode.get("ErrorMessage");
+
+            if (errorCodeNode == null || errorCodeNode.isEmpty()) {
+                log.error("Error while processing opt response data");
+            }
+
+            if (errorCodeNode.asInt() != 0) {
+                log.error("Unable to send mobile otp: " + errorMessage.asText());
+                throw new OtpException("Unable to send OTP", ErrorCode.OTP_001, errorMessage.asText());
+            }
+        } else {
+            JsonNode resonseJsonNode = response.getBody();
+            JsonNode errorCodeNode = resonseJsonNode.get("ErrorCode");
+            JsonNode errorMessage = resonseJsonNode.get("ErrorMessage");
+
+            if (errorCodeNode == null || errorCodeNode.isEmpty()) {
+                log.error("Error while processing opt response data");
+            }
+
+            throw new OtpException("Unable to send OTP", ErrorCode.OTP_004, errorMessage.asText());
+        }
+    }
 
 }

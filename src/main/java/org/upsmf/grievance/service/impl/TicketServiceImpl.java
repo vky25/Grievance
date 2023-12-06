@@ -3,27 +3,31 @@ package org.upsmf.grievance.service.impl;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.micrometer.core.instrument.util.StringUtils;
 import lombok.Synchronized;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.lang.NonNull;
 import org.springframework.stereotype.Service;
 import org.upsmf.grievance.dto.TicketRequest;
 import org.upsmf.grievance.dto.UpdateTicketRequest;
 import org.upsmf.grievance.enums.TicketPriority;
 import org.upsmf.grievance.enums.TicketStatus;
+import org.upsmf.grievance.exception.TicketException;
 import org.upsmf.grievance.model.*;
-import org.upsmf.grievance.repository.AssigneeTicketAttachmentRepository;
-import org.upsmf.grievance.repository.CommentRepository;
-import org.upsmf.grievance.repository.RaiserTicketAttachmentRepository;
+import org.upsmf.grievance.repository.*;
 import org.upsmf.grievance.repository.es.TicketRepository;
 import org.upsmf.grievance.service.EmailService;
 import org.upsmf.grievance.service.OtpService;
 import org.upsmf.grievance.service.TicketService;
 import org.upsmf.grievance.util.DateUtil;
+import org.upsmf.grievance.util.ErrorCode;
 
 import javax.transaction.Transactional;
 import java.sql.Timestamp;
+import java.time.Instant;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import java.util.Collections;
@@ -31,8 +35,12 @@ import java.util.Date;
 import java.util.List;
 import java.util.Optional;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
+
+import static org.upsmf.grievance.enums.Department.*;
 
 @Service
+@Slf4j
 public class TicketServiceImpl implements TicketService {
 
     @Autowired
@@ -45,6 +53,8 @@ public class TicketServiceImpl implements TicketService {
 
     @Value("${ticket.escalation.days}")
     private String ticketEscalationDays;
+    @Value("${mail.reminder.subject}")
+    private String mailReminderSubject;
 
     @Autowired
     private CommentRepository commentRepository;
@@ -54,6 +64,10 @@ public class TicketServiceImpl implements TicketService {
 
     @Autowired
     private RaiserTicketAttachmentRepository raiserTicketAttachmentRepository;
+    @Autowired
+    private UserRepository userRepository;
+    @Autowired
+    private DepartmentRepository departmentRepository;
 
     @Autowired
     private OtpService otpService;
@@ -120,7 +134,16 @@ public class TicketServiceImpl implements TicketService {
         // validate OTP
         boolean isValid = otpService.validateOtp(ticketRequest.getEmail(), ticketRequest.getOtp());
         if(!isValid) {
-            throw new RuntimeException("Bad Request");
+            throw new TicketException("Invalid mail OTP, Please enter correct OTP", ErrorCode.TKT_001,
+                    "Error while matching mail OTP");
+        } else {
+            boolean isMobileOtpValid = otpService.validateMobileOtp(ticketRequest.getPhone(),
+                    ticketRequest.getMobileOtp());
+
+            if (!isMobileOtpValid) {
+                throw new TicketException("Invalid mobile OTP, Please enter correct OTP", ErrorCode.TKT_001,
+                        "Error while matching mobile OTP");
+            }
         }
         // set default value for creating ticket
         Ticket ticket = createTicketWithDefault(ticketRequest);
@@ -129,6 +152,7 @@ public class TicketServiceImpl implements TicketService {
         // send mail
         EmailDetails emailDetails = EmailDetails.builder().recipient(ticket.getEmail()).subject("New Complaint Registration").build();
         emailService.sendCreateTicketMail(emailDetails, ticket);
+        System.out.println(ticket);
         return ticket;
     }
 
@@ -139,6 +163,7 @@ public class TicketServiceImpl implements TicketService {
      * @throws Exception
      */
     private Ticket createTicketWithDefault(TicketRequest ticketRequest) throws Exception {
+
         Timestamp currentTimestamp = new Timestamp(DateUtil.getCurrentDate().getTime());
         LocalDateTime escalationDateTime = LocalDateTime.now().plus(Long.valueOf(ticketEscalationDays), ChronoUnit.DAYS);
         return Ticket.builder()
@@ -150,9 +175,8 @@ public class TicketServiceImpl implements TicketService {
                 .requesterType(ticketRequest.getUserType())
                 .assignedToId(ticketRequest.getCc())
                 .description(ticketRequest.getDescription())
-                .createdDate(currentTimestamp)
                 .updatedDate(currentTimestamp)
-                .lastUpdatedBy("-1")
+                .lastUpdatedBy("-1")//need to get user details and add id or name
                 .escalated(false)
                 .escalatedDate(Timestamp.valueOf(escalationDateTime))
                 .escalatedTo("-1")
@@ -160,6 +184,7 @@ public class TicketServiceImpl implements TicketService {
                 .requestType(ticketRequest.getRequestType())
                 .priority(TicketPriority.LOW)
                 .escalatedBy("-1")
+                .reminderCounter(0L)
                 .build();
     }
 
@@ -205,11 +230,24 @@ public class TicketServiceImpl implements TicketService {
         } else if (curentUpdatedTicket.getStatus().name().equalsIgnoreCase(TicketStatus.INVALID.name())) {
             generateFeedbackLinkAndEmailForJunkTicket(ticket);
             return ticket;
-        }else {
+        }else if (updateTicketRequest.getIsNudged() != null && updateTicketRequest.getIsNudged()
+                && !org.apache.commons.lang.StringUtils.isEmpty(updateTicketRequest.getCc())) {
+            sendMailToNodal(updateTicketRequest.getCc(), ticket);
+            return ticket;
+        } else {
             EmailDetails resolutionOfYourGrievance = EmailDetails.builder().subject("Resolution of Your Grievance - " + curentUpdatedTicket.getTicketId()).recipient(curentUpdatedTicket.getEmail()).build();
             emailService.sendUpdateTicketMail(resolutionOfYourGrievance, ticket);
             return ticket;
         }
+    }
+
+    private void sendMailToNodal(@NonNull String cc, Ticket ticket) {
+
+        EmailDetails emailDetails = EmailDetails.builder()
+                .subject(mailReminderSubject)
+                .build();
+
+        emailService.sendMailToNodalOfficers(emailDetails, ticket);
     }
 
     private void generateFeedbackLinkAndEmail(Ticket curentUpdatedTicket) {
@@ -269,7 +307,16 @@ public class TicketServiceImpl implements TicketService {
             ticket.setStatus(updateTicketRequest.getStatus());
         }
 
+        if (updateTicketRequest.getIsNudged() != null && updateTicketRequest.getIsNudged()){
+            if (ticket.getReminderCounter() != null){
+                ticket.setReminderCounter(ticket.getReminderCounter() + 1);
+            } else {
+                ticket.setReminderCounter(0L);
+            }
+        }
+
         if(updateTicketRequest.getCc()!=null && !updateTicketRequest.getCc().isBlank()) {
+
             ticket.setAssignedToId(updateTicketRequest.getCc());
         }
         if(updateTicketRequest.getPriority()!=null) {
@@ -277,6 +324,15 @@ public class TicketServiceImpl implements TicketService {
         }
         if(updateTicketRequest.getIsJunk()!=null) {
             ticket.setJunk(updateTicketRequest.getIsJunk());
+            if (updateTicketRequest.getRequestedBy() == null || updateTicketRequest.getRequestedBy().isBlank()) {
+                ticket.setJunkedBy("-1");
+            } else {
+                User user = userRepository.findByKeycloakId(updateTicketRequest.getRequestedBy()).orElseThrow();
+                String firstName = user.getFirstName();
+                String lastName = user.getLastname();
+                String junkedBy = firstName + " " + lastName;
+                ticket.setJunkedBy(junkedBy);
+            }
         }
         ticket.setUpdatedDate(new Timestamp(DateUtil.getCurrentDate().getTime()));
         // update assignee comments
@@ -305,7 +361,11 @@ public class TicketServiceImpl implements TicketService {
      * @return
      */
     private org.upsmf.grievance.model.es.Ticket convertToESTicketObj(Ticket ticket) {
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DateUtil.DEFAULT_DATE_FORMAT);
+        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(DateUtil.DEFAULT_DATE_FORMATTS);
+
+        log.info(">>>>>>>>>>>>>>>>>>>>>> system time from ticket data: "
+                + ticket.getCreatedDate().toLocalDateTime().format(dateTimeFormatter));
+
         // get user details based on ID
         return org.upsmf.grievance.model.es.Ticket.builder()
                 .ticketId(ticket.getId())
@@ -318,6 +378,7 @@ public class TicketServiceImpl implements TicketService {
                 .assignedToName("") // get user details based on ID
                 .description(ticket.getDescription())
                 .junk(ticket.isJunk())
+                .junkedBy(ticket.getJunkedBy())
                 .createdDate(ticket.getCreatedDate().toLocalDateTime().format(dateTimeFormatter))
                 .createdDateTS(ticket.getCreatedDate().getTime())
                 .updatedDate(ticket.getUpdatedDate().toLocalDateTime().format(dateTimeFormatter))
@@ -332,7 +393,8 @@ public class TicketServiceImpl implements TicketService {
                 .escalatedBy(ticket.getEscalatedBy())
                 .escalatedTo(ticket.getEscalatedTo())
                 .escalatedToAdmin(ticket.isEscalatedToAdmin())
-                .rating(Long.valueOf(0)).build();
+                .reminderCounter(ticket.getReminderCounter())
+                .rating(0L).build();
     }
 
     /**
@@ -412,7 +474,11 @@ public class TicketServiceImpl implements TicketService {
     @Synchronized
     public void updateTicket(Long ticketId) {
         Ticket ticket = getTicketById(ticketId);
-        ticket.setUpdatedDate(new Timestamp(new Date().getTime()));
+        try {
+            ticket.setUpdatedDate(new Timestamp(DateUtil.getCurrentDate().getTime()));
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
         ticket.setEscalatedDate(new Timestamp(new Date().getTime()));
         ticket.setEscalatedToAdmin(true);
         ticket.setPriority(TicketPriority.MEDIUM);

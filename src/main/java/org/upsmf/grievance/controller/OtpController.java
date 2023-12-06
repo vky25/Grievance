@@ -39,5 +39,19 @@ public class OtpController {
         }
     }
 
+    @PostMapping("/generate-mobile-otp")
+    public ResponseEntity<String> generateMobileOtp(@RequestBody OtpRequest otpRequest) {
+        otpService.generateAndSendMobileOtp(otpRequest);
+        return ResponseEntity.ok("OTP generated and sent successfully");
+    }
 
+    @PostMapping("/validate-mobile-otp")
+    public ResponseEntity<String> validateMobileOtp(@RequestBody OtpValidationRequest otpValidationRequest) {
+        boolean isValid = otpService.validateMobileOtp(otpValidationRequest.getPhone(), otpValidationRequest.getOtp());
+        if (isValid) {
+            return ResponseEntity.ok("OTP validation successful.");
+        } else {
+            return ResponseEntity.badRequest().body("Invalid OTP.");
+        }
+    }
 }

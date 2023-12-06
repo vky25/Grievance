@@ -152,6 +152,8 @@ public class EmailServiceImpl implements EmailService {
                     velocityContext.put("created_date", DateUtil.getFormattedDateInString(ticket.getCreatedDate()));
                     velocityContext.put("department", departmentList!=null&&!departmentList.isEmpty()?departmentList.get(0).getCode():"Others");
                     velocityContext.put("comment", comment);
+                    velocityContext.put("support_email_address","upmedicalfaculty@upsmfac.org");
+                    velocityContext.put("support_phone_number","Phone: (0522) 2238846, 2235964, 2235965, 3302100");
                     velocityContext.put("url", feedbackUrl);
 
                     // signature
@@ -473,6 +475,60 @@ public class EmailServiceImpl implements EmailService {
             // Sending the mail
             javaMailSender.send(preparator);
             log.info("create ticket mail Sent Successfully...");
+        }
+        // Catch block to handle the exceptions
+        catch (Exception e) {
+            log.error("Error while Sending Mail", e);
+        }
+    }
+
+    @Override
+    public void sendMailToNodalOfficers(EmailDetails details, Ticket ticket){
+        log.info("Entering sendMailToNodalOfficers method");
+        Runnable mailThread = () -> {
+            log.info("Inside mailThread lambda");// lambda expression
+            sendNudgeMailToNodalOfficer(details, ticket);
+        };
+        new Thread(mailThread, "MailThread").start();
+    }
+
+    private void sendNudgeMailToNodalOfficer(EmailDetails details, Ticket ticket) {
+        try {
+
+            List<User> users = getUsersByDepartment(ticket.getAssignedToId());
+            if(users.isEmpty()) {
+                return;
+            }
+            users.stream().forEach(user -> {
+                MimeMessagePreparator preparator = new MimeMessagePreparator() {
+                    public void prepare(MimeMessage mimeMessage) throws Exception {
+                        MimeMessageHelper message = new MimeMessageHelper(mimeMessage);
+                        message.setTo(user.getEmail());
+                        message.setSubject(details.getSubject());
+
+                        List<Department> departmentList = Department.getById(Integer.parseInt(ticket.getAssignedToId()));
+                        VelocityContext velocityContext = new VelocityContext();
+                        velocityContext.put("first_name", user.getFirstName());
+                        velocityContext.put("id", ticket.getId());
+                        velocityContext.put("created_date", DateUtil.getFormattedDateInString(ticket.getCreatedDate()));
+                        velocityContext.put("priority", ticket.getPriority());
+                        velocityContext.put("department", departmentList != null && !departmentList.isEmpty() ? departmentList.get(0).getCode() : "Others");
+                        velocityContext.put("status", ticket.getStatus().name());
+                        velocityContext.put("site_url", siteUrl);
+                        // signature
+                        createCommonMailSignature(velocityContext);
+                        // merge mail body
+                        StringWriter stringWriter = new StringWriter();
+                        velocityEngine.mergeTemplate("templates/nodal_nudge_ticket.vm", "UTF-8", velocityContext, stringWriter);
+
+                        message.setText(stringWriter.toString(), true);
+                    }
+                };
+                // Sending the mail
+                javaMailSender.send(preparator);
+                log.info("create ticket mail Sent Successfully...");
+
+            });
         }
         // Catch block to handle the exceptions
         catch (Exception e) {
