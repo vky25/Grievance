@@ -24,7 +24,7 @@ pipeline {
             steps {
                 script {
                     def dockerImage = docker.build("${GCR_REGISTRY}/${IMAGE_NAME}:${BRANCH_NAME}")
-	 				          dockerImage.tag("${GCR_REGISTRY}/${IMAGE_NAME}:0.0.1")
+	 	    dockerImage.tag("${GCR_REGISTRY}/${IMAGE_NAME}:0.0.1")
                 }
             }
         }
