@@ -3,7 +3,7 @@ pipeline {
     
     environment {
         GCR_REGISTRY = "asia.gcr.io/upsmf-368011" 
-        IMAGE_NAME = "Grievance-BE-UAT "
+        IMAGE_NAME = "grievance-be-uat"
         BRANCH_NAME = "main" 
     }
 
