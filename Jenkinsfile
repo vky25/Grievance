@@ -10,7 +10,7 @@ pipeline {
     stages {
         stage('Clone Repository') {
             steps {
-                git 'https://github.com/vky25/Grievance.git'
+                git branch: 'main', url: 'https://github.com/vky25/Grievance.git'
             }
         }
 
