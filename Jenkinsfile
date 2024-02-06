@@ -5,6 +5,7 @@ pipeline {
         GCR_REGISTRY = "asia.gcr.io/upsmf-368011" 
         IMAGE_NAME = "grievance-be-uat"
         BRANCH_NAME = "main" 
+	IMAGE_TAG = 0.01    
     }
 
     stages {
@@ -23,8 +24,9 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    def dockerImage = docker.build("${GCR_REGISTRY}/${IMAGE_NAME}:${BRANCH_NAME}")
-	 	    dockerImage.tag("${GCR_REGISTRY}/${IMAGE_NAME}:0.0.1")
+		    dockerImage = docker.build("${GCR_REGISTRY}/${IMAGE_NAME}:${IMAGE_TAG}")	
+                    #def dockerImage = docker.build("${GCR_REGISTRY}/${IMAGE_NAME}:${BRANCH_NAME}")
+	 	    #dockerImage.tag("${GCR_REGISTRY}/${IMAGE_NAME}:0.0.1")
                 }
             }
         }
